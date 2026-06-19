@@ -131,10 +131,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
 
     if (direction == CardSwiperDirection.right) {
       if (_deleteOnly) {
-        if (mounted) {
-          TopToast.show(context, message: '当前为仅删除模式，无法右滑归类');
+        if (previousIndex + 1 >= _assets.length) {
+          await _finishSession();
+        } else {
+          await _preloadThumbnails(previousIndex + 1);
         }
-        return false;
+        return true;
       }
 
       HapticFeedback.mediumImpact();
@@ -304,7 +306,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Text(
-                  '仅删除模式：左滑标记删除',
+                  '仅删除模式：左滑删除 · 右滑跳过',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.systemOrange),
                   textAlign: TextAlign.center,
                 ),
@@ -331,9 +333,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
                       controller: _swiperController,
                       cardsCount: _assets.length,
                       onSwipe: _onSwipe,
-                      allowedSwipeDirection: _deleteOnly
-                          ? const AllowedSwipeDirection.only(left: true)
-                          : const AllowedSwipeDirection.symmetric(horizontal: true),
+                      allowedSwipeDirection: const AllowedSwipeDirection.symmetric(horizontal: true),
                       cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
                         final asset = _assets[index];
                         final bytes = _thumbnails[asset.id];
@@ -419,6 +419,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
                           Icon(Icons.close, color: AppColors.systemRed, size: 20),
                           SizedBox(width: 8),
                           Text('左滑删除', style: TextStyle(fontSize: 12, color: AppColors.systemRed)),
+                          SizedBox(width: 48),
+                          Icon(Icons.redo, size: 20, color: Color(0xFF8E8E93)),
+                          SizedBox(width: 8),
+                          Text('右滑跳过', style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
                         ],
                       ),
                     ),

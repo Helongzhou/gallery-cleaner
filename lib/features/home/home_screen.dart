@@ -65,6 +65,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    ref.read(libraryTabStateProvider.notifier).setStartHandler(null);
+    super.dispose();
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -165,18 +171,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _syncLibraryTabState() {
-    final canStart = _pendingOrganizeCount > 0 && _source != null;
+    final hasValidTarget = _isDeleteOnly || _targetAlbum != null;
+    final canStart = _pendingOrganizeCount > 0 && _source != null && hasValidTarget;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(libraryTabStateProvider.notifier).state = LibraryTabState(
-        canStart: canStart,
-        buttonLabel: canStart ? AppStrings.startOrganize : AppStrings.allOrganized,
-        onStart: canStart ? () => _start() : null,
-      );
+      ref.read(libraryTabStateProvider.notifier).updateTab(
+            canStart: canStart,
+            buttonLabel: canStart ? AppStrings.startOrganize : AppStrings.allOrganized,
+            onStart: canStart ? _start : null,
+          );
     });
   }
 
   Future<void> _selectTarget(String id) async {
+    if (!OrganizeMode.isDeleteOnly(id) && !_writableAlbums.any((a) => a.id == id)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法使用该相册作为目标，请选择其他相册')),
+        );
+      }
+      return;
+    }
     setState(() => _targetSelectionId = id);
     await ref.read(settingsRepositoryProvider).setLastTargetAlbumId(id);
     _syncLibraryTabState();
@@ -247,8 +262,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _start({bool continueSession = false}) async {
+    if (!mounted) return;
     final source = _source;
     if (source == null) return;
+
+    if (!_isDeleteOnly && _targetAlbum == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择有效的目标相册')),
+      );
+      return;
+    }
 
     final sessionService = ref.read(sessionServiceProvider);
     final targetId = _isDeleteOnly ? OrganizeMode.deleteOnlyTargetId : _targetAlbum!.id;

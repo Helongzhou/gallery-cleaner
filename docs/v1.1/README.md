@@ -1,123 +1,82 @@
-# PRD — 相册整理 App v1.1
+# PRD — 相册主理人 v1.1
 
 **状态：已实现**（2026-06-19）
 
-## 主题（待实现）
+> v1 基线见 [../v1/README.md](../v1/README.md) · 变更摘要见 [../CHANGELOG.md](../CHANGELOG.md)
 
-见 [theme.md](./theme.md) — 深浅色 Token + 我的 Tab 外观切换。
+## 一句话
 
-## 背景
+在 v1 滑动整理核心流之上，深化体验：多 Tab 工具、主题体系、足迹地图、整理历史与统一弹窗。
 
-v1 已完成核心整理流（来源/目标选择 → 滑动归类/标记删除 → 待删确认）。v1.1 聚焦**体验加深** + **智能 Tab 首个工具**，时光/我的继续占位。
+## 功能矩阵
 
-## 范围（已锁定）
-
-| 模块 | v1.1 | 说明 |
+| 模块 | 状态 | 说明 |
 |------|------|------|
-| 相册页 · 撤销 | ✅ | 会话内 3 步栈 + 「撤销 (N)」 |
-| 相册页 · 待删除 | ✅ | 瀑布流 + 摘要条 + 底部双 CTA |
-| 智能 Tab · 截图清理 | ✅ | 三档时间筛选 + 列表清理 |
-| 足迹 Tab | ✅ | 地图打点 + 城市列表 + 海报分享 |
-| 智能 · 相似图/大视频/模糊 | ❌ | 后续版本 |
-| 时光 Tab | ❌ | 占位 |
-| 我的 Tab | ✅ | 设置中心 + 外观迁移 |
-| AppBar Actions | ✅ | 相库历史 / 智能雷达 / 我的设置 |
+| 相库 · 滑动整理 | ✅ | v1 核心流 + 会话内 3 步撤销 |
+| 相库 · 整理历史 | ✅ | 按会话时间线，抽屉内查看照片与反悔 |
+| 待删除页 | ✅ | 瀑布流、体积摘要、双 CTA |
+| 智能 · 截图清理 | ✅ | 三档时间 + 列表批量删除 |
+| 智能 · 相似图/大视频 | ⏳ | 灰态占位卡 |
+| 足迹 Tab | ✅ | 地图、城市列表、海报分享 |
+| 我的 Tab | ✅ | 设置内嵌（主题、地图样式、缓存、关于） |
+| AppBar Actions | ✅ | 历史 / 雷达扫描 |
+| 主题系统 | ✅ | 跟随系统 + 浅/深手动切换 |
+| UniversalModal | ✅ | 全局确认弹窗 |
+| 启动图 / 图标 | ✅ | 浅/深启动图、应用图标 |
 
----
+## Tab 结构
 
-## F1 滑动撤销（增强）
+```
+相库 (/home)     — 选相册、开始整理、整理历史
+智能 (/smart)    — 截图清理、雷达刷新
+足迹 (/footprints) — 地图 + 城市列表
+我的 (/profile)  — 偏好设置与关于
+```
 
-**行为**
-- 仅**当前整理会话**内有效；退出滑动页或完成会话后栈清空
-- 最多撤销 **3 步**滑动操作（左滑待删 / 右滑归类）
-- 数据层：`processed_records` 按 `session_id` 查询最近 3 条可撤销记录
+整理流程（滑动、摘要、待删）为全屏路由，覆盖 Tab Bar。
 
-**UI**
-- 左下角固定按钮：**「撤销 (N)」**，N = 剩余可撤销次数（0 时禁用）
-- 不使用 Snackbar 倒计时（与 v1 设计脱钩）
+## 模块文档
 
-**实现要点**
-- 扩展 `OrganizeRepository.undoLastAction` → 支持连续撤销（或 `undoActions` 批量逻辑）
-- `SwipeScreen` 维护 `remainingUndoCount` 状态
-
----
-
-## F2 待删除页（Trash Bin 优化）
-
-**布局**
-- **2 列瀑布流**（不等高 masonry）预览缩略图
-- 默认**全选**
-
-**顶部摘要条**
-- 文案：`已选 N 张 · 约 XX MB`（按 asset 文件大小累加，异步计算）
-
-**底部固定双按钮**
-- **移出待删**（恢复，从 `pending_delete` 表移除，不调系统 API）
-- **彻底删除**（调用系统相册删除 API，成功后清 DB）
-
-**保留**
-- 取消 / 全选·取消全选 AppBar 逻辑
-- `canPop` → pop，否则 `go(home)` 导航修复
-
----
-
-## F3 智能 Tab · 截图专项清理
-
-**入口**
-- 底部 Tab「智能」→ 卡片式首页（v1.1 仅一张「截图清理」主卡片 + 骨架屏）
-
-**时间筛选（Tab 切换）**
-| 档位 | 条件 |
+| 文档 | 内容 |
 |------|------|
-| 30 天前 | `createDate` < now − 30d |
-| 90 天前 | `createDate` < now − 90d |
-| 1 年前 | `createDate` < now − 365d |
+| [theme.md](./theme.md) | 设计 Token、主题切换 |
+| [footprints.md](./footprints.md) | 足迹扫描、地图、隐私 |
+| [app-bar-actions.md](./app-bar-actions.md) | 历史抽屉、雷达、我的 |
+| [history-footprint-polish.md](./history-footprint-polish.md) | 历史时间线、海报地图截图 |
+| [universal-modal.md](./universal-modal.md) | 确认弹窗规范 |
+| [splash.md](./splash.md) | 启动图资源与更新方式 |
 
-**数据源**
-- `photo_manager` 读取系统 **Screenshots** 相册（`AssetPathEntity` 智能相册 / albumType 筛选）
+## 数据与版本
 
-**扫描策略**
-- 进入智能 Tab 触发扫描，**骨架屏**等待
-- 后台 **Isolate** 扫描，结果写入 SQLite 缓存表
-- 缓存 **24h** 过期；**下拉刷新**强制重扫
-
-**列表页**
-- 进入某档位 → 缩略图列表，**默认全选**
-- 底部 **「清理所选」** → 系统删除 API → 更新缓存
-
-**隐私**
-- 纯本地，无上传
-
----
+- SQLite **schema v3**：`footprint_assets`、`footprint_scan_meta` 等
+- 设置键：`theme_preference`、`footprint_map_style`、`biometric_lock_enabled` 等（`app_settings` 表）
+- 整理记录：`processed_records` + `sessions`（历史按 `session_id` 分组）
 
 ## 非功能需求
 
-- **Local-First**：截图扫描、大小统计均在设备本地完成
-- **异步**：扫描/算大小走 Isolate 或 `compute`，主线程不阻塞
-- **UI**：延续 v1 设计 token（圆角 16、主色 `#0062FF`、玻璃 Tab Bar、Large Title）
-- **平台**：iOS only（与 v1 一致）
-
----
-
-## 开发顺序
-
-1. **撤销 3 步**（数据层 + 滑动页 UI）
-2. **待删瀑布流**（布局 + 摘要 + 底部 CTA）
-3. **智能截图清理**（缓存表 + 扫描服务 + 智能 Tab 页面）
-
----
+- **Local-First**：截图/足迹扫描、逆地理、整理记录均在设备本地
+- **异步**：扫描走 Isolate；算体积不阻塞 UI
+- **UI**：圆角 16、Large Title、玻璃 Tab Bar、`AppSpacing` / `AppRadius` token
+- **平台**：iOS only
 
 ## 测试
 
-- Widget：撤销按钮状态、待删摘要计算（mock）
-- Integration（模拟器）：进入智能 Tab → 截图列表 → 清理流程（FakePhotoLibrary）
-- 沿用 `docs/qa/README.md` 约定
+```bash
+flutter test                    # Widget / 单元（当前 22+ 项）
+flutter test integration_test/  # 集成（需模拟器）
+```
 
----
+约定见 [../qa/README.md](../qa/README.md)。
 
 ## 显式不做（v1.1）
 
-- 相似照片聚合、大视频、模糊检测
-- 那年今日、足迹地图
-- 隐私保险箱、数据看板
+- 相似照片聚合、大视频清理、模糊检测（仅占位）
+- 隐私保险箱 / 数据看板
 - Android
+- `local_auth` 实装（Face ID 为 UI 占位）
+
+## 后续可扩展
+
+- UniversalModal `input` 类型（替代新建相册 `AlertDialog`）
+- 全局 `AppSpacing` 16/24 统一、图标 2px 描边
+- Phase 2 智能能力实装

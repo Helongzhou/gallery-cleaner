@@ -40,11 +40,18 @@ class AlbumTargetCarousel extends StatelessWidget {
             children: [
               Text('目标相册', style: Theme.of(context).textTheme.titleMedium),
               const Spacer(),
-              if (onViewAll != null)
+              TextButton(
+                key: const Key('target_create_album'),
+                onPressed: onCreate,
+                child: Text('新建相册', style: TextStyle(color: context.appPrimary)),
+              ),
+              if (onViewAll != null) ...[
+                const SizedBox(width: AppSpacing.gutter),
                 TextButton(
                   onPressed: onViewAll,
                   child: Text('查看全部', style: TextStyle(color: context.appPrimary)),
                 ),
+              ],
             ],
           ),
         ),
@@ -67,8 +74,6 @@ class AlbumTargetCarousel extends StatelessWidget {
                 selected: deleteOnlySelected,
                 onTap: () => onSelect(OrganizeMode.deleteOnlyTargetId),
               ),
-              const SizedBox(width: AppSpacing.gutter),
-              _NewAlbumItem(onTap: onCreate),
               const SizedBox(width: AppSpacing.gutter),
               ...albums.take(8).map((album) {
                 return Padding(
@@ -120,42 +125,6 @@ class _DeleteOnlyItem extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('仅删除', style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NewAlbumItem extends StatelessWidget {
-  const _NewAlbumItem({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: onTap,
-      child: SizedBox(
-        width: AlbumTargetCarousel._size,
-        child: Column(
-          children: [
-            Container(
-              width: AlbumTargetCarousel._size,
-              height: AlbumTargetCarousel._size,
-              decoration: BoxDecoration(
-                color: context.appSurfaceContainerHigh.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: context.appOutlineVariant.withValues(alpha: 0.5),
-                  width: 2,
-                  strokeAlign: BorderSide.strokeAlignInside,
-                ),
-              ),
-              child: Icon(Icons.add, color: context.appPrimary, size: 32),
-            ),
-            const SizedBox(height: 8),
-            Text('新建相册', style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),

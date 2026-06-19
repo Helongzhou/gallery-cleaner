@@ -12,5 +12,5 @@
 ## 足迹海报
 
 - 分享时渲染专用 `FlutterMap`，`fitBounds` 全览 + pin 圆点
-- 跟随用户足迹地图样式（dark/light）
+- 跟随用户足迹地图样式（含「跟随系统」）
 - 瓦片加载后 `RepaintBoundary` 截图嵌入海报

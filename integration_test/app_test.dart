@@ -59,6 +59,6 @@ void main() {
     await pauseForDemo(const Duration(seconds: 3));
 
     expect(find.byKey(const Key('swipe_header_title')), findsOneWidget);
-    expect(find.text('仅删除模式：左滑标记删除'), findsOneWidget);
+    expect(find.text('仅删除模式：左滑删除 · 右滑跳过'), findsOneWidget);
   });
 }

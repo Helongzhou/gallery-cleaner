@@ -1,5 +1,7 @@
 # UI 改版规格总览
 
+> **历史归档**：本文档夹为早期 UI 改版设计稿，部分决策已被 [v1.1](../v1.1/README.md) 实现或调整。**以 `docs/v1.1/` 为现行准绳**，此处仅供 token 推导过程参考。
+
 > 基于设计稿 + [Apple HIG](https://developer.apple.com/cn/design/human-interface-guidelines/) + [HIG Layout](https://developer.apple.com/cn/design/human-interface-guidelines/layout)
 
 ## 一句话

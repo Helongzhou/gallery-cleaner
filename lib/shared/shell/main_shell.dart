@@ -42,7 +42,9 @@ class MainShell extends ConsumerWidget {
                 key: const Key('home_start_organize'),
                 label: libraryState.buttonLabel,
                 icon: libraryState.canStart ? Icons.auto_awesome : null,
-                onPressed: libraryState.canStart ? libraryState.onStart : null,
+                onPressed: libraryState.canStart
+                    ? () => ref.read(libraryTabStateProvider.notifier).startOrganize()
+                    : null,
               ),
             ),
           NavigationBar(

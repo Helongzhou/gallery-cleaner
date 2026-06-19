@@ -5,24 +5,42 @@ class LibraryTabState {
   const LibraryTabState({
     this.canStart = false,
     this.buttonLabel = '开始整理',
-    this.onStart,
   });
 
   final bool canStart;
   final String buttonLabel;
-  final VoidCallback? onStart;
 
   LibraryTabState copyWith({
     bool? canStart,
     String? buttonLabel,
-    VoidCallback? onStart,
   }) {
     return LibraryTabState(
       canStart: canStart ?? this.canStart,
       buttonLabel: buttonLabel ?? this.buttonLabel,
-      onStart: onStart ?? this.onStart,
     );
   }
 }
 
-final libraryTabStateProvider = StateProvider<LibraryTabState>((ref) => const LibraryTabState());
+class LibraryTabController extends StateNotifier<LibraryTabState> {
+  LibraryTabController() : super(const LibraryTabState());
+
+  VoidCallback? _startHandler;
+
+  void setStartHandler(VoidCallback? handler) {
+    _startHandler = handler;
+  }
+
+  void startOrganize() {
+    _startHandler?.call();
+  }
+
+  void updateTab({required bool canStart, required String buttonLabel, VoidCallback? onStart}) {
+    setStartHandler(onStart);
+    state = LibraryTabState(canStart: canStart, buttonLabel: buttonLabel);
+  }
+}
+
+final libraryTabStateProvider =
+    StateNotifierProvider<LibraryTabController, LibraryTabState>((ref) {
+  return LibraryTabController();
+});

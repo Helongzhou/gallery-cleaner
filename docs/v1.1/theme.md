@@ -1,15 +1,15 @@
 # v1.1 主题与设计 Token 规格
 
-**状态：已决策，待实现**
+**状态：已实现**
 
 ## 决策汇总
 
 | # | 议题 | 决策 |
 |---|------|------|
-| 1 | 主题模式 | 跟随系统（默认）+ 我的 Tab 手动三选一 |
-| 2 | 落地范围 | 仅全局 Token 替换，不逐页改布局 |
+| 1 | 主题模式 | 跟随系统（默认）+ 我的 Tab 三选一 |
+| 2 | 落地范围 | 全局 Token + `MaterialApp.themeMode` |
 | 3 | 深色强调 | 白底黑字 CTA + 白/浅灰强调色 |
-| 4 | 我的 Tab | 极简：外观 SegmentedButton，其余占位 |
+| 4 | 我的 Tab | 外观 SegmentedControl + 完整设置项内嵌 |
 | 5 | 深色背景 | 全局统一 `#131313` |
 
 ---
@@ -68,8 +68,7 @@ enum ThemePreference { system, light, dark }
 3. `lib/models/theme_preference.dart` + `SettingsRepository` 读写
 4. `lib/providers/theme_provider.dart` — `themeModeProvider`
 5. `lib/app.dart` — 监听 `themeModeProvider`
-6. `lib/features/profile/profile_screen.dart` — 替换占位，外观 SegmentedButton
-7. `lib/router/app_router.dart` — profile 路由指向新页面
+6. `lib/features/profile/profile_screen.dart` — 主题 SegmentedControl 及完整设置
 
 ---
 

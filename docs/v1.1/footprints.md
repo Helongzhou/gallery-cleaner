@@ -6,7 +6,7 @@
 
 | 议题 | 决策 |
 |------|------|
-| 地图 | `flutter_map` + Carto 暗色瓦片（瓦片联网，GPS 本地） |
+| 地图 | `flutter_map` + Carto 瓦片（样式可跟随系统；瓦片联网，GPS 本地） |
 | 扫描 | 照片+视频，增量 SQLite 缓存，24h 全量校验 |
 | 逆地理 | iOS `CLGeocoder`（`geocoding` 包）+ 内存/SQLite 缓存 |
 | 聚合粒度 | 城市级，`城市 · 区县` 副标题 |
