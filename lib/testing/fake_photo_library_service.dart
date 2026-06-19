@@ -84,4 +84,11 @@ class FakePhotoLibraryService extends PhotoLibraryService {
 
   @override
   Future<List<PhotoAssetInfo>> getAssetsByIds(List<String> assetIds) async => [];
+
+  @override
+  Future<AppResult<void>> removeFromAlbum({
+    required String assetId,
+    required String albumId,
+  }) async =>
+      const AppSuccess(null);
 }

@@ -1,4 +1,5 @@
 import 'package:album_organizer/models/theme_preference.dart';
+import 'package:album_organizer/models/footprint_map_style.dart';
 import 'package:album_organizer/models/pending_delete_item.dart';
 import 'package:album_organizer/models/active_session.dart';
 import 'package:album_organizer/services/database/app_database.dart';
@@ -25,6 +26,12 @@ class StubSettingsRepository extends SettingsRepository {
   Future<void> setThemePreference(ThemePreference preference) async {
     _themePreference = preference;
   }
+
+  @override
+  Future<bool> isBiometricLockEnabled() async => false;
+
+  @override
+  Future<FootprintMapStyle> getFootprintMapStyle() async => FootprintMapStyle.dark;
 }
 
 class StubOrganizeRepository extends OrganizeRepository {

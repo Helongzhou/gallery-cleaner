@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:photo_manager/photo_manager.dart';
 
+import 'package:photo_manager/photo_manager.dart';
+
 import '../models/footprint_asset.dart';
 import '../models/album_info.dart';
 import '../models/photo_asset_info.dart';
@@ -312,6 +314,25 @@ class PhotoLibraryService {
       if (path.id == albumId) return path;
     }
     return null;
+  }
+
+  Future<AppResult<void>> removeFromAlbum({
+    required String assetId,
+    required String albumId,
+  }) async {
+    try {
+      final asset = await AssetEntity.fromId(assetId);
+      final album = await _findAlbum(albumId);
+      if (asset == null) return const AppFailure('找不到该照片');
+      if (album == null) return const AppFailure('找不到目标相册');
+      final removed = await PhotoManager.editor.darwin.removeInAlbum(asset, album);
+      if (!removed) {
+        return const AppFailure('无法从相册移除照片');
+      }
+      return const AppSuccess(null);
+    } catch (e) {
+      return AppFailure('从相册移除失败', cause: e);
+    }
   }
 
   /// Scans all accessible photos/videos for GPS coordinates (batched, non-blocking).

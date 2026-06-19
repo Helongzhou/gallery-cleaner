@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/album_info.dart';
 import '../../models/photo_permission_status.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/library_tab_state.dart';
 import '../../providers/providers.dart';
 import '../../router/app_router.dart';
@@ -17,11 +18,13 @@ import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/album_source_card.dart';
 import '../../shared/widgets/album_target_carousel.dart';
 import '../../shared/widgets/error_view.dart';
+import '../../shared/widgets/header_action_button.dart';
 import '../../shared/widgets/large_title_header.dart';
 import '../../shared/widgets/limited_access_banner.dart';
 import '../../shared/widgets/loading_view.dart';
 import '../../shared/widgets/pending_delete_entry.dart';
 import 'album_picker_sheet.dart';
+import 'widgets/history_drawer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -288,6 +291,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(homeRefreshProvider, (previous, next) {
+      if (previous != next) _load();
+    });
+
     if (_loading) {
       return Scaffold(
         backgroundColor: context.appBackground,
@@ -302,6 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final source = _source;
+    final showHistoryBadge = ref.watch(historyBadgeProvider);
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -313,11 +321,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             slivers: [
               LargeTitleHeader(
                 title: AppStrings.appTitle,
-                onProfileTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('个人中心即将推出')),
-                  );
-                },
+                trailing: HeaderActionButton(
+                  key: const Key('home_history_button'),
+                  icon: Icons.history,
+                  showBadge: showHistoryBadge,
+                  semanticLabel: '整理历史',
+                  onTap: () {
+                    ref.read(historyProvider.notifier).refresh();
+                    showHistoryDrawer(context);
+                  },
+                ),
               ),
               if (_permission == PhotoPermissionStatus.limited)
                 SliverToBoxAdapter(

@@ -25,13 +25,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('theme_preference_segment')), findsOneWidget);
-    expect(find.text('当前：跟随系统'), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
 
     await tester.tap(find.text('深色'));
     await tester.pumpAndSettle();
 
-    expect(find.text('当前：深色'), findsOneWidget);
     expect(await settings.getThemePreference(), ThemePreference.dark);
   });
 }

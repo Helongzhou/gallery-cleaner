@@ -14,6 +14,7 @@ class FootprintMap extends StatelessWidget {
     required this.markersVisible,
     required this.onMarkerCityTap,
     required this.onClusterAssetIds,
+    this.tileUrl,
   });
 
   final MapController controller;
@@ -22,7 +23,9 @@ class FootprintMap extends StatelessWidget {
   final void Function(String cityKey) onMarkerCityTap;
   final void Function(List<String> assetIds) onClusterAssetIds;
 
-  static const _tileUrl = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+  static const _defaultTileUrl = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+
+  final String? tileUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +59,7 @@ class FootprintMap extends StatelessWidget {
         ),
         children: [
           TileLayer(
-            urlTemplate: _tileUrl,
+            urlTemplate: tileUrl ?? _defaultTileUrl,
             userAgentPackageName: 'com.albumorganizer.albumOrganizer',
             retinaMode: RetinaMode.isHighDensity(context),
           ),

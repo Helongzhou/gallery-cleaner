@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import 'app_pressable.dart';
 
 class LargeTitleHeader extends StatelessWidget {
   const LargeTitleHeader({
     super.key,
     required this.title,
-    this.onProfileTap,
+    this.trailing,
   });
 
   final String title;
-  final VoidCallback? onProfileTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -29,18 +28,7 @@ class LargeTitleHeader extends StatelessWidget {
             Expanded(
               child: Text(title, style: Theme.of(context).textTheme.displaySmall),
             ),
-            AppPressable(
-              onTap: onProfileTap,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: context.appSurfaceContainerHigh.withValues(alpha: 0.8),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.person_outline, color: context.appPrimary, size: 22),
-              ),
-            ),
+            if (trailing != null) trailing!,
           ],
         ),
       ),

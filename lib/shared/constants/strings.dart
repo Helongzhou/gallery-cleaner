@@ -16,6 +16,9 @@ abstract final class AppStrings {
   static const removeFromPending = '移出待删';
   static const deletePermanently = '彻底删除';
   static const smartCleanup = '智能清理';
+  static const smartPrivacyNote = '所有分析均在本地完成，不会上传至服务器';
+  static const profileTitle = '我的';
+  static const profileComingSoon = '数据看板、隐私保险箱等功能即将推出';
   static const screenshotCleanup = '截图清理';
   static const screenshotCleanupHint = '清理失效的屏幕截图，释放空间';
   static const cleanSelected = '清理所选';

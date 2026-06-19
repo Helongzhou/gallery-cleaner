@@ -7,6 +7,7 @@ import '../../models/footprint_asset.dart';
 import '../../models/photo_permission_status.dart';
 import '../../providers/footprint_provider.dart';
 import '../../providers/providers.dart';
+import '../../providers/settings_provider.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_theme.dart';
@@ -90,6 +91,7 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
   }
 
   Widget _buildBody(FootprintState state) {
+    final mapStyle = ref.watch(footprintMapStyleProvider);
     if (state.permission == PhotoPermissionStatus.denied) {
       return FootprintEmptyState(
         title: '需要读取照片位置',
@@ -128,6 +130,7 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
                   controller: _mapController,
                   assets: state.assets,
                   markersVisible: state.markersVisible,
+                  tileUrl: mapStyle.tileUrl,
                   onMarkerCityTap: (cityKey) => _openCity(cityKey, state),
                   onClusterAssetIds: (ids) => _openAssets(ids, state),
                 ),

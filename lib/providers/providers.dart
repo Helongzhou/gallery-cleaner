@@ -4,6 +4,8 @@ import '../services/database/app_database.dart';
 import '../services/organize_repository.dart';
 import '../services/photo_library_service.dart';
 import '../services/screenshot_cache_repository.dart';
+import 'footprint_provider.dart';
+import '../services/cache_clear_service.dart';
 import '../services/screenshot_scan_service.dart';
 import '../services/session_service.dart';
 import '../services/settings_repository.dart';
@@ -34,5 +36,13 @@ final screenshotScanServiceProvider = Provider<ScreenshotScanService>(
   (ref) => ScreenshotScanService(
     ref.watch(photoLibraryServiceProvider),
     ref.watch(screenshotCacheRepositoryProvider),
+  ),
+);
+
+final cacheClearServiceProvider = Provider<CacheClearService>(
+  (ref) => CacheClearService(
+    ref.watch(databaseProvider),
+    ref.watch(screenshotCacheRepositoryProvider),
+    ref.watch(footprintCacheRepositoryProvider),
   ),
 );

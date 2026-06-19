@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../models/footprint_map_style.dart';
 import '../models/theme_preference.dart';
 import '../shared/constants/organize_mode.dart';
 import 'database/app_database.dart';
@@ -12,6 +13,8 @@ class SettingsRepository {
   static const _onboardingKey = 'has_seen_onboarding';
   static const _lastTargetKey = 'last_target_album_id';
   static const _themePreferenceKey = 'theme_preference';
+  static const _biometricLockKey = 'biometric_lock_enabled';
+  static const _footprintMapStyleKey = 'footprint_map_style';
 
   Future<String?> getLastTargetAlbumId() async {
     final db = await _db.database;
@@ -72,6 +75,48 @@ class SettingsRepository {
     await db.insert(
       'app_settings',
       {'key': _themePreferenceKey, 'value': preference.storageValue},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<bool> isBiometricLockEnabled() async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'app_settings',
+      where: 'key = ?',
+      whereArgs: [_biometricLockKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return false;
+    return rows.first['value'] == '1';
+  }
+
+  Future<void> setBiometricLockEnabled(bool value) async {
+    final db = await _db.database;
+    await db.insert(
+      'app_settings',
+      {'key': _biometricLockKey, 'value': value ? '1' : '0'},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<FootprintMapStyle> getFootprintMapStyle() async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'app_settings',
+      where: 'key = ?',
+      whereArgs: [_footprintMapStyleKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return FootprintMapStyle.dark;
+    return FootprintMapStyle.fromStorage(rows.first['value'] as String?);
+  }
+
+  Future<void> setFootprintMapStyle(FootprintMapStyle style) async {
+    final db = await _db.database;
+    await db.insert(
+      'app_settings',
+      {'key': _footprintMapStyleKey, 'value': style.storageValue},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }

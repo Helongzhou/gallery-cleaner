@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/photo_asset_info.dart';
 import '../../models/swipe_action.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/providers.dart';
 import '../../router/app_router.dart';
 import '../../router/routes.dart';
@@ -190,6 +191,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
       _processedInSession++;
       _sessionActionCount++;
     });
+    ref.read(historyProvider.notifier).refresh();
+    ref.read(homeRefreshProvider.notifier).state++;
 
     if (previousIndex + 1 >= _assets.length) {
       await _finishSession();
@@ -216,6 +219,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
       _undosPerformed++;
       _sessionActionCount = (_sessionActionCount - 1).clamp(0, 9999);
     });
+    ref.read(historyProvider.notifier).refresh();
+    ref.read(homeRefreshProvider.notifier).state++;
     await _loadAssets();
     if (mounted) {
       TopToastInfo.show(context, '已撤销');

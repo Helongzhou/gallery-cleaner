@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../models/history_entry.dart';
 import '../models/pending_delete_item.dart';
 import '../models/process_action.dart';
 import '../models/processed_record.dart';
@@ -73,6 +74,84 @@ class OrganizeRepository {
       [sessionId],
     );
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  static const historyLimit = 50;
+
+  Future<int> historyCount() async {
+    final db = await _db.database;
+    final result = await db.rawQuery('SELECT COUNT(*) AS c FROM processed_records');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<List<HistoryEntry>> getRecentHistory({
+    required Map<String, String> albumNames,
+    int limit = historyLimit,
+  }) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'processed_records',
+      orderBy: 'processed_at DESC, id DESC',
+      limit: limit,
+    );
+    return rows.map((row) {
+      final record = ProcessedRecord.fromMap(row);
+      return HistoryEntry(
+        record: record,
+        label: _historyLabel(record, albumNames),
+        targetAlbumName: record.targetAlbumId != null
+            ? albumNames[record.targetAlbumId!]
+            : null,
+      );
+    }).toList();
+  }
+
+  Future<ProcessedRecord?> getRecordById(int recordId) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'processed_records',
+      where: 'id = ?',
+      whereArgs: [recordId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return ProcessedRecord.fromMap(rows.first);
+  }
+
+  Future<AppResult<SwipeAction?>> undoByRecordId(int recordId) async {
+    try {
+      final record = await getRecordById(recordId);
+      if (record == null) return const AppSuccess(null);
+
+      final db = await _db.database;
+      await db.transaction((txn) async {
+        await txn.delete(
+          'processed_records',
+          where: 'id = ?',
+          whereArgs: [recordId],
+        );
+        if (record.action == ProcessAction.pendingDelete) {
+          await txn.delete(
+            'pending_delete',
+            where: 'asset_id = ?',
+            whereArgs: [record.assetId],
+          );
+        }
+      });
+      return AppSuccess(SwipeAction(record: record, assetId: record.assetId));
+    } catch (e) {
+      return AppFailure('撤销失败', cause: e);
+    }
+  }
+
+  String _historyLabel(ProcessedRecord record, Map<String, String> albumNames) {
+    if (record.action == ProcessAction.pendingDelete) {
+      return '标记为待删除';
+    }
+    final name = record.targetAlbumId != null
+        ? albumNames[record.targetAlbumId!] ?? '相册'
+        : '相册';
+    return '移入了 $name';
   }
 
   Future<AppResult<SwipeAction?>> undoLastAction(String sessionId) async {
