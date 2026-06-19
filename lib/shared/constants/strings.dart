@@ -12,6 +12,16 @@ abstract final class AppStrings {
   static const swipeLeftDelete = '左滑标记删除';
   static const swipeRightOrganize = '右滑归入';
   static const undo = '撤销';
+  static String undoWithCount(int count) => '撤销 ($count)';
+  static const removeFromPending = '移出待删';
+  static const deletePermanently = '彻底删除';
+  static const smartCleanup = '智能清理';
+  static const screenshotCleanup = '截图清理';
+  static const screenshotCleanupHint = '清理失效的屏幕截图，释放空间';
+  static const cleanSelected = '清理所选';
+  static const screenshotBucket30 = '30 天前';
+  static const screenshotBucket90 = '90 天前';
+  static const screenshotBucket365 = '1 年前';
   static const organizeComplete = '整理完成';
   static const backHome = '返回首页';
   static const organizeOther = '整理其他相册';

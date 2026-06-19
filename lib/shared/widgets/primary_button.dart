@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'app_pressable.dart';
 
@@ -41,11 +40,11 @@ class PrimaryButton extends StatelessWidget {
           children: [
             Text(
               label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onPrimary),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: context.appOnPrimary),
             ),
             if (icon != null) ...[
               const SizedBox(width: 8),
-              Icon(icon, color: AppColors.onPrimary, size: 20),
+              Icon(icon, color: context.appOnPrimary, size: 20),
             ],
           ],
         ),

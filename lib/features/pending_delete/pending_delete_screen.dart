@@ -12,8 +12,10 @@ import '../../shared/constants/strings.dart';
 import '../../shared/result.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/glass_container.dart';
 import '../../shared/widgets/loading_view.dart';
+import '../../shared/widgets/waterfall_grid.dart';
 import '../../services/photo_library_service.dart';
 
 class PendingDeleteScreen extends ConsumerStatefulWidget {
@@ -29,6 +31,8 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
   List<PendingDeleteItem> _items = [];
   final Set<String> _selected = {};
   final Map<String, Uint8List?> _thumbnails = {};
+  final Map<String, int> _fileSizes = {};
+  final Map<String, double> _aspectRatios = {};
 
   @override
   void initState() {
@@ -40,13 +44,22 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
     setState(() => _loading = true);
     final items = await ref.read(organizeRepositoryProvider).getPendingDelete();
     final photoService = ref.read(photoLibraryServiceProvider);
+
     for (final item in items) {
       _thumbnails[item.assetId] = await photoService.getThumbnail(
         assetId: item.assetId,
-        width: 200,
-        height: 200,
+        width: 280,
+        height: 280,
       );
+      _fileSizes[item.assetId] = await photoService.getAssetFileSize(item.assetId) ?? 0;
+      final dims = await photoService.getAssetDimensions(item.assetId);
+      if (dims != null && dims.height > 0) {
+        _aspectRatios[item.assetId] = dims.width / dims.height;
+      } else {
+        _aspectRatios[item.assetId] = 1.0;
+      }
     }
+
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -69,12 +82,23 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
     });
   }
 
+  int get _selectedBytes {
+    var total = 0;
+    for (final id in _selected) {
+      total += _fileSizes[id] ?? 0;
+    }
+    return total;
+  }
+
   Future<void> _restoreSelected() async {
+    if (_selected.isEmpty) return;
     await ref.read(organizeRepositoryProvider).removePendingDelete(_selected.toList());
     await _load();
   }
 
   Future<void> _confirmDelete() async {
+    if (_selected.isEmpty) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -150,44 +174,27 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      color: AppColors.systemGray6.withValues(alpha: 0.5),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '确认后，照片将从所有设备中移除',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
+                      color: context.appPrimary.withValues(alpha: 0.08),
+                      child: Text(
+                        '已选 ${_selected.length} 张 · 约 ${formatFileSize(_selectedBytes)}',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(color: context.appPrimary),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    if (_selected.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _restoreSelected,
-                            child: const Text(AppStrings.restore),
-                          ),
-                        ),
-                      ),
                     Expanded(
-                      child: GridView.builder(
-                        padding: EdgeInsets.zero,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                        ),
+                      child: WaterfallGrid(
+                        padding: const EdgeInsets.all(12),
                         itemCount: _items.length,
+                        itemHeight: (index) {
+                          final item = _items[index];
+                          final ratio = _aspectRatios[item.assetId] ?? 1.0;
+                          return 160 * (ratio < 0.6 ? 1.4 : ratio > 1.6 ? 0.75 : ratio);
+                        },
                         itemBuilder: (context, index) {
                           final item = _items[index];
                           final selected = _selected.contains(item.assetId);
                           final bytes = _thumbnails[item.assetId];
+
                           return GestureDetector(
                             onTap: () {
                               setState(() {
@@ -200,22 +207,28 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
                               });
                             },
                             child: Stack(
-                              fit: StackFit.expand,
                               children: [
-                                if (bytes != null)
-                                  Image.memory(bytes, fit: BoxFit.cover)
-                                else
-                                  ColoredBox(color: context.appSurfaceContainerHigh),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: SizedBox.expand(
+                                    child: bytes != null
+                                        ? Image.memory(bytes, fit: BoxFit.cover)
+                                        : ColoredBox(color: context.appSurfaceContainerHigh),
+                                  ),
+                                ),
                                 if (selected)
-                                  DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: AppColors.systemRed.withValues(alpha: 0.35), width: 3),
+                                  Positioned.fill(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppColors.systemRed.withValues(alpha: 0.6), width: 3),
+                                      ),
                                     ),
                                   ),
                                 if (selected)
                                   Positioned(
-                                    right: 6,
-                                    bottom: 6,
+                                    right: 8,
+                                    bottom: 8,
                                     child: Container(
                                       width: 24,
                                       height: 24,
@@ -242,24 +255,39 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: _selected.isEmpty ? null : _confirmDelete,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.systemRed,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _selected.isEmpty ? null : _restoreSelected,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text(AppStrings.removeFromPending),
+                        ),
                       ),
-                      child: Text('${AppStrings.confirmDelete} ${_selected.length} 张照片'),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _selected.isEmpty ? null : _confirmDelete,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.systemRed,
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text(AppStrings.deletePermanently),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '照片将移入系统「最近删除」相册',
+                    '彻底删除后，照片将移入系统「最近删除」相册',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

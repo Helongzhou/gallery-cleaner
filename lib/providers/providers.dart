@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/database/app_database.dart';
 import '../services/organize_repository.dart';
 import '../services/photo_library_service.dart';
+import '../services/screenshot_cache_repository.dart';
+import '../services/screenshot_scan_service.dart';
 import '../services/session_service.dart';
 import '../services/settings_repository.dart';
 
@@ -22,4 +24,15 @@ final sessionServiceProvider = Provider<SessionService>(
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => SettingsRepository(ref.watch(databaseProvider)),
+);
+
+final screenshotCacheRepositoryProvider = Provider<ScreenshotCacheRepository>(
+  (ref) => ScreenshotCacheRepository(ref.watch(databaseProvider)),
+);
+
+final screenshotScanServiceProvider = Provider<ScreenshotScanService>(
+  (ref) => ScreenshotScanService(
+    ref.watch(photoLibraryServiceProvider),
+    ref.watch(screenshotCacheRepositoryProvider),
+  ),
 );

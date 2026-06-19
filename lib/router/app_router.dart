@@ -7,8 +7,12 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/pending_delete/pending_delete_screen.dart';
 import '../features/permission_denied/permission_denied_screen.dart';
 import '../features/placeholder/placeholder_tab_screen.dart';
+import '../features/profile/profile_screen.dart';
+import '../features/smart/screenshot_list_screen.dart';
+import '../features/smart/smart_screen.dart';
 import '../features/summary/summary_screen.dart';
 import '../features/swipe/swipe_screen.dart';
+import '../models/screenshot_bucket.dart';
 import '../providers/providers.dart';
 import '../shared/shell/main_shell.dart';
 import 'routes.dart';
@@ -81,10 +85,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.smart,
-            builder: (context, state) => const PlaceholderTabScreen(
-              title: '智能整理',
-              icon: Icons.auto_awesome_outlined,
-            ),
+            builder: (context, state) => const SmartScreen(),
+            routes: [
+              GoRoute(
+                path: 'screenshots',
+                builder: (context, state) {
+                  final bucket = ScreenshotBucket.fromKey(state.uri.queryParameters['bucket']);
+                  if (bucket == null) {
+                    return const Scaffold(body: Center(child: Text('缺少截图筛选参数')));
+                  }
+                  return ScreenshotListScreen(bucket: bucket);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: AppRoutes.shared,
@@ -95,10 +108,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.profile,
-            builder: (context, state) => const PlaceholderTabScreen(
-              title: '我的',
-              icon: Icons.person_outline,
-            ),
+            builder: (context, state) => const ProfileScreen(),
           ),
         ],
       ),

@@ -198,6 +198,25 @@ class PhotoLibraryService {
     }
   }
 
+  Future<List<PhotoAssetInfo>> getAssetsByIds(List<String> assetIds) async {
+    if (assetIds.isEmpty) return [];
+
+    final results = <PhotoAssetInfo>[];
+    for (final id in assetIds) {
+      final asset = await AssetEntity.fromId(id);
+      if (asset == null) continue;
+      results.add(
+        PhotoAssetInfo(
+          id: asset.id,
+          createDate: asset.createDateTime,
+          width: asset.width,
+          height: asset.height,
+        ),
+      );
+    }
+    return results;
+  }
+
   Future<Uint8List?> getThumbnail({
     required String assetId,
     required int width,
@@ -206,6 +225,65 @@ class PhotoLibraryService {
     final asset = await AssetEntity.fromId(assetId);
     if (asset == null) return null;
     return asset.thumbnailDataWithSize(ThumbnailSize(width, height));
+  }
+
+  Future<int?> getAssetFileSize(String assetId) async {
+    try {
+      final asset = await AssetEntity.fromId(assetId);
+      if (asset == null) return null;
+      final file = await asset.file;
+      return file?.length();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<({int width, int height})?> getAssetDimensions(String assetId) async {
+    final asset = await AssetEntity.fromId(assetId);
+    if (asset == null) return null;
+    return (width: asset.width, height: asset.height);
+  }
+
+  Future<AppResult<List<PhotoAssetInfo>>> getScreenshotAssetsOlderThan(DateTime cutoff) async {
+    try {
+      final album = await _findScreenshotsAlbum();
+      if (album == null) {
+        return const AppSuccess([]);
+      }
+
+      final count = await album.assetCountAsync;
+      if (count == 0) return const AppSuccess([]);
+
+      final results = <PhotoAssetInfo>[];
+      const batchSize = 80;
+      for (var start = 0; start < count; start += batchSize) {
+        final end = (start + batchSize > count) ? count : start + batchSize;
+        final assets = await album.getAssetListRange(start: start, end: end);
+        for (final asset in assets) {
+          final created = asset.createDateTime;
+          if (created.isBefore(cutoff)) {
+            results.add(
+              PhotoAssetInfo(
+                id: asset.id,
+                createDate: created,
+                width: asset.width,
+                height: asset.height,
+              ),
+            );
+          }
+        }
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      results.sort((a, b) {
+        final aDate = a.createDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = b.createDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+      return AppSuccess(results);
+    } catch (e) {
+      return AppFailure('读取截图失败', cause: e);
+    }
   }
 
   Future<Uint8List?> getAlbumCover(String albumId, {int size = 400}) async {
@@ -231,6 +309,24 @@ class PhotoLibraryService {
     );
     for (final path in paths) {
       if (path.id == albumId) return path;
+    }
+    return null;
+  }
+
+  Future<AssetPathEntity?> _findScreenshotsAlbum() async {
+    final paths = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+      hasAll: true,
+    );
+    for (final path in paths) {
+      final subtype = path.albumTypeEx?.darwin?.subtype;
+      if (subtype == PMDarwinAssetCollectionSubtype.smartAlbumScreenshots) {
+        return path;
+      }
+      final name = path.name.toLowerCase();
+      if (name.contains('screenshot') || name.contains('截屏') || name.contains('屏幕快照')) {
+        return path;
+      }
     }
     return null;
   }

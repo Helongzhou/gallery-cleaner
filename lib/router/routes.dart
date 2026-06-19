@@ -2,6 +2,7 @@ abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const home = '/';
   static const smart = '/smart';
+  static const smartScreenshots = '/smart/screenshots';
   static const shared = '/shared';
   static const profile = '/profile';
   static const swipe = '/swipe';

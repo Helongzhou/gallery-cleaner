@@ -66,6 +66,15 @@ class OrganizeRepository {
     }
   }
 
+  Future<int> countSessionActions(String sessionId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM processed_records WHERE session_id = ?',
+      [sessionId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   Future<AppResult<SwipeAction?>> undoLastAction(String sessionId) async {
     try {
       final db = await _db.database;

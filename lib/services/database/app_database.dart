@@ -18,8 +18,20 @@ class AppDatabase {
     final path = join(dbPath, 'album_organizer.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
+        await _createV1Tables(db);
+        await _createV2Tables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createV2Tables(db);
+        }
+      },
+    );
+  }
+
+  Future<void> _createV1Tables(Database db) async {
         await db.execute('''
           CREATE TABLE processed_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +73,15 @@ class AppDatabase {
         await db.execute(
           'CREATE INDEX idx_processed_session ON processed_records(session_id)',
         );
-      },
-    );
+  }
+
+  Future<void> _createV2Tables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS screenshot_scan_cache (
+        bucket TEXT PRIMARY KEY,
+        asset_ids TEXT NOT NULL,
+        scanned_at INTEGER NOT NULL
+      )
+    ''');
   }
 }

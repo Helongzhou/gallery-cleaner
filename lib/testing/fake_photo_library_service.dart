@@ -70,4 +70,18 @@ class FakePhotoLibraryService extends PhotoLibraryService {
   Future<AppResult<DeleteResult>> deleteAssets(List<String> assetIds) async {
     return AppSuccess(DeleteResult(successIds: assetIds, failedIds: const []));
   }
+
+  @override
+  Future<int?> getAssetFileSize(String assetId) async => 1024 * 500;
+
+  @override
+  Future<({int width, int height})?> getAssetDimensions(String assetId) async => (width: 3, height: 4);
+
+  @override
+  Future<AppResult<List<PhotoAssetInfo>>> getScreenshotAssetsOlderThan(DateTime cutoff) async {
+    return const AppSuccess([]);
+  }
+
+  @override
+  Future<List<PhotoAssetInfo>> getAssetsByIds(List<String> assetIds) async => [];
 }

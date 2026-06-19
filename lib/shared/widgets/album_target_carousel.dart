@@ -112,7 +112,7 @@ class _DeleteOnlyItem extends StatelessWidget {
                 color: AppColors.systemRed.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
-                  color: selected ? AppColors.primary : AppColors.outlineVariant.withValues(alpha: 0.5),
+                  color: selected ? context.appPrimary : context.appOutlineVariant.withValues(alpha: 0.5),
                   width: selected ? 3 : 1,
                 ),
               ),
@@ -147,7 +147,7 @@ class _NewAlbumItem extends StatelessWidget {
                 color: context.appSurfaceContainerHigh.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
-                  color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                  color: context.appOutlineVariant.withValues(alpha: 0.5),
                   width: 2,
                   strokeAlign: BorderSide.strokeAlignInside,
                 ),
@@ -191,7 +191,7 @@ class _AlbumItem extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
-                  color: selected ? AppColors.primary : AppColors.outlineVariant.withValues(alpha: 0.3),
+                  color: selected ? context.appPrimary : context.appOutlineVariant.withValues(alpha: 0.3),
                   width: selected ? 3 : 1,
                 ),
               ),

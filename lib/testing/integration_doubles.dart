@@ -3,7 +3,6 @@ import '../services/organize_repository.dart';
 import '../services/session_service.dart';
 import '../services/settings_repository.dart';
 import '../models/active_session.dart';
-import '../models/pending_delete_item.dart';
 
 /// Test doubles used when `INTEGRATION_TEST=true` (simulator integration tests).
 class IntegrationSettingsRepository extends SettingsRepository {

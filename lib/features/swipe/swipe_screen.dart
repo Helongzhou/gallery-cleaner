@@ -12,6 +12,7 @@ import '../../models/swipe_action.dart';
 import '../../providers/providers.dart';
 import '../../router/app_router.dart';
 import '../../router/routes.dart';
+import '../../shared/constants/organize_constants.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/result.dart';
 import '../../shared/theme/app_colors.dart';
@@ -38,8 +39,16 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
   List<PhotoAssetInfo> _assets = [];
   final Map<String, Uint8List?> _thumbnails = {};
   int _processedInSession = 0;
+  int _undosPerformed = 0;
+  int _sessionActionCount = 0;
 
   bool get _deleteOnly => widget.args.deleteOnly;
+
+  int get _remainingUndoSteps {
+    final cap = OrganizeConstants.maxUndoStepsPerSession - _undosPerformed;
+    if (cap <= 0) return 0;
+    return _sessionActionCount < cap ? _sessionActionCount : cap;
+  }
 
   @override
   void initState() {
@@ -83,6 +92,12 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
       _assets = assets;
     });
     await _preloadThumbnails(0);
+    await _refreshUndoState();
+  }
+
+  Future<void> _refreshUndoState() async {
+    final count = await ref.read(organizeRepositoryProvider).countSessionActions(widget.args.sessionId);
+    if (mounted) setState(() => _sessionActionCount = count);
   }
 
   Future<void> _preloadThumbnails(int index) async {
@@ -171,7 +186,10 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
       return false;
     }
 
-    setState(() => _processedInSession++);
+    setState(() {
+      _processedInSession++;
+      _sessionActionCount++;
+    });
 
     if (previousIndex + 1 >= _assets.length) {
       await _finishSession();
@@ -182,6 +200,8 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
   }
 
   Future<void> _undoLast() async {
+    if (_remainingUndoSteps <= 0) return;
+
     final result = await ref.read(organizeRepositoryProvider).undoLastAction(widget.args.sessionId);
     if (!mounted) return;
     if (result is AppFailure<SwipeAction?>) {
@@ -191,7 +211,11 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
     final action = (result as AppSuccess<SwipeAction?>).value;
     if (action == null) return;
     HapticFeedback.lightImpact();
-    setState(() => _processedInSession = (_processedInSession - 1).clamp(0, 9999));
+    setState(() {
+      _processedInSession = (_processedInSession - 1).clamp(0, 9999);
+      _undosPerformed++;
+      _sessionActionCount = (_sessionActionCount - 1).clamp(0, 9999);
+    });
     await _loadAssets();
     if (mounted) {
       TopToastInfo.show(context, '已撤销');
@@ -395,27 +419,34 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
                     ),
                   const Spacer(),
                   AppPressable(
-                    onTap: _undoLast,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: context.appSurfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(999),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.undo, size: 20),
-                          const SizedBox(width: 6),
-                          Text(AppStrings.undo, style: Theme.of(context).textTheme.titleMedium),
-                        ],
+                    onTap: _remainingUndoSteps > 0 ? _undoLast : null,
+                    child: Opacity(
+                      opacity: _remainingUndoSteps > 0 ? 1 : 0.4,
+                      child: Container(
+                        key: const Key('swipe_undo_button'),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: context.appSurfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.undo, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppStrings.undoWithCount(_remainingUndoSteps),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

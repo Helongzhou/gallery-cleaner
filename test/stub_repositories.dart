@@ -1,3 +1,4 @@
+import 'package:album_organizer/models/theme_preference.dart';
 import 'package:album_organizer/models/pending_delete_item.dart';
 import 'package:album_organizer/models/active_session.dart';
 import 'package:album_organizer/services/database/app_database.dart';
@@ -9,11 +10,21 @@ import 'package:album_organizer/services/settings_repository.dart';
 class StubSettingsRepository extends SettingsRepository {
   StubSettingsRepository() : super(AppDatabase.instance);
 
+  ThemePreference _themePreference = ThemePreference.system;
+
   @override
   Future<bool> hasSeenOnboarding() async => true;
 
   @override
   Future<String?> getLastTargetAlbumId() async => null;
+
+  @override
+  Future<ThemePreference> getThemePreference() async => _themePreference;
+
+  @override
+  Future<void> setThemePreference(ThemePreference preference) async {
+    _themePreference = preference;
+  }
 }
 
 class StubOrganizeRepository extends OrganizeRepository {
