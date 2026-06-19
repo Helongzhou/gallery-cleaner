@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/footprints/footprints_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/pending_delete/pending_delete_screen.dart';
 import '../features/permission_denied/permission_denied_screen.dart';
-import '../features/placeholder/placeholder_tab_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/smart/screenshot_list_screen.dart';
 import '../features/smart/smart_screen.dart';
@@ -34,6 +34,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (hasSeenOnboarding && isOnboarding) {
         return AppRoutes.home;
+      }
+      if (state.uri.path == AppRoutes.shared) {
+        return AppRoutes.footprints;
       }
       return null;
     },
@@ -100,11 +103,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(
-            path: AppRoutes.shared,
-            builder: (context, state) => const PlaceholderTabScreen(
-              title: '共享相册',
-              icon: Icons.folder_shared_outlined,
-            ),
+            path: AppRoutes.footprints,
+            builder: (context, state) => const FootprintsScreen(),
           ),
           GoRoute(
             path: AppRoutes.profile,

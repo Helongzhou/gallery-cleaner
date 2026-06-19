@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/theme_provider.dart';
+import 'shared/constants/strings.dart';
 import 'router/app_router.dart';
 import 'shared/theme/app_theme.dart';
 
@@ -13,7 +14,7 @@ class AlbumOrganizerApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
-      title: '相册整理',
+      title: AppStrings.appTitle,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,

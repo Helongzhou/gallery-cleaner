@@ -15,7 +15,9 @@ class MainShell extends ConsumerWidget {
 
   int _indexForLocation(String location) {
     if (location.startsWith(AppRoutes.smart)) return 1;
-    if (location.startsWith(AppRoutes.shared)) return 2;
+    if (location.startsWith(AppRoutes.footprints) || location.startsWith(AppRoutes.shared)) {
+      return 2;
+    }
     if (location.startsWith(AppRoutes.profile)) return 3;
     return 0;
   }
@@ -52,7 +54,7 @@ class MainShell extends ConsumerWidget {
                 case 1:
                   context.go(AppRoutes.smart);
                 case 2:
-                  context.go(AppRoutes.shared);
+                  context.go(AppRoutes.footprints);
                 case 3:
                   context.go(AppRoutes.profile);
               }
@@ -69,9 +71,9 @@ class MainShell extends ConsumerWidget {
                 label: '智能',
               ),
               NavigationDestination(
-                icon: Icon(Icons.folder_shared_outlined),
-                selectedIcon: Icon(Icons.folder_shared),
-                label: '共享',
+                icon: Icon(Icons.explore_outlined),
+                selectedIcon: Icon(Icons.explore),
+                label: '足迹',
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_outline),

@@ -18,14 +18,18 @@ class AppDatabase {
     final path = join(dbPath, 'album_organizer.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await _createV1Tables(db);
         await _createV2Tables(db);
+        await _createV3Tables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _createV2Tables(db);
+        }
+        if (oldVersion < 3) {
+          await _createV3Tables(db);
         }
       },
     );
@@ -83,5 +87,32 @@ class AppDatabase {
         scanned_at INTEGER NOT NULL
       )
     ''');
+  }
+
+  Future<void> _createV3Tables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS footprint_assets (
+        asset_id TEXT PRIMARY KEY,
+        lat REAL NOT NULL,
+        lng REAL NOT NULL,
+        city_key TEXT NOT NULL,
+        city_name TEXT NOT NULL,
+        district TEXT,
+        taken_at INTEGER,
+        scanned_at INTEGER NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS footprint_scan_meta (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        last_full_scan_at INTEGER,
+        total_with_gps INTEGER NOT NULL DEFAULT 0,
+        total_without_gps INTEGER NOT NULL DEFAULT 0,
+        total_cities INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_footprint_city ON footprint_assets(city_key)',
+    );
   }
 }

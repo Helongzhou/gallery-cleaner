@@ -1,5 +1,5 @@
 name: album_organizer
-description: "相册整理 — Tinder 式滑动整理 iOS 系统相册"
+description: "相册主理人 — Tinder 式滑动整理 iOS 系统相册"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -42,6 +42,11 @@ dependencies:
   flutter_card_swiper: ^7.0.2
   intl: ^0.20.2
   flutter_lucide: ^1.11.0
+  flutter_map: ^8.3.0
+  flutter_map_marker_cluster: ^8.2.2
+  latlong2: ^0.9.1
+  geocoding: ^4.0.0
+  share_plus: ^13.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

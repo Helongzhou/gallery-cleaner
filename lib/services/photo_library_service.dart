@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:photo_manager/photo_manager.dart';
 
+import '../models/footprint_asset.dart';
 import '../models/album_info.dart';
 import '../models/photo_asset_info.dart';
 import '../models/photo_permission_status.dart';
@@ -311,6 +312,62 @@ class PhotoLibraryService {
       if (path.id == albumId) return path;
     }
     return null;
+  }
+
+  /// Scans all accessible photos/videos for GPS coordinates (batched, non-blocking).
+  Future<({List<RawGeoAsset> geoTagged, int withoutGps})> scanGeoTaggedAssets({
+    void Function(int processed, int total)? onProgress,
+  }) async {
+    try {
+      final paths = await PhotoManager.getAssetPathList(
+        type: RequestType.common,
+        hasAll: true,
+      );
+      if (paths.isEmpty) {
+        return (geoTagged: <RawGeoAsset>[], withoutGps: 0);
+      }
+
+      final allAlbum = paths.firstWhere(
+        (path) => path.isAll,
+        orElse: () => paths.first,
+      );
+
+      final count = await allAlbum.assetCountAsync;
+      if (count == 0) {
+        return (geoTagged: <RawGeoAsset>[], withoutGps: 0);
+      }
+
+      final geoTagged = <RawGeoAsset>[];
+      var withoutGps = 0;
+      const batchSize = 80;
+
+      for (var start = 0; start < count; start += batchSize) {
+        final end = (start + batchSize > count) ? count : start + batchSize;
+        final assets = await allAlbum.getAssetListRange(start: start, end: end);
+        for (final asset in assets) {
+          final lat = asset.latitude;
+          final lng = asset.longitude;
+          if (lat == null || lng == null || (lat == 0 && lng == 0)) {
+            withoutGps++;
+            continue;
+          }
+          geoTagged.add(
+            RawGeoAsset(
+              id: asset.id,
+              lat: lat,
+              lng: lng,
+              takenAt: asset.createDateTime,
+            ),
+          );
+        }
+        onProgress?.call(end, count);
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      return (geoTagged: geoTagged, withoutGps: withoutGps);
+    } catch (_) {
+      return (geoTagged: <RawGeoAsset>[], withoutGps: 0);
+    }
   }
 
   Future<AssetPathEntity?> _findScreenshotsAlbum() async {

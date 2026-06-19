@@ -1,4 +1,4 @@
-# 相册整理
+# 相册主理人
 
 Tinder 式滑动整理 iOS 系统相册的 Flutter App。
 

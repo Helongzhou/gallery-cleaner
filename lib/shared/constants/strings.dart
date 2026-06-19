@@ -1,5 +1,5 @@
 abstract final class AppStrings {
-  static const appTitle = '相册整理';
+  static const appTitle = '相册主理人';
   static const sourceAlbum = '来源相册';
   static const targetAlbum = '目标相册';
   static const pendingCount = '待整理';
@@ -40,4 +40,9 @@ abstract final class AppStrings {
   static const openSettings = '去设置';
   static const skip = '跳过';
   static const getStarted = '开始使用';
+  static const footprintsTitle = '足迹';
+  static const footprintsPrivacyNote = '位置信息仅在本地解析，地图瓦片联网加载，照片与坐标不会上传';
+  static const footprintsPermissionBody =
+      '我们需要读取照片位置信息以生成您的专属足迹，所有数据仅保存在本地。请在设置中允许完全访问相册。';
+  static const footprintsEmptyBody = '相册中暂无带位置信息的照片，去记录你的第一步吧';
 }

@@ -3,6 +3,7 @@ abstract final class AppRoutes {
   static const home = '/';
   static const smart = '/smart';
   static const smartScreenshots = '/smart/screenshots';
+  static const footprints = '/footprints';
   static const shared = '/shared';
   static const profile = '/profile';
   static const swipe = '/swipe';

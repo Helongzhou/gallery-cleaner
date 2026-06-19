@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>相册整理</string>
+	<string>相册主理人</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要访问相册以整理和归类您的照片</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
