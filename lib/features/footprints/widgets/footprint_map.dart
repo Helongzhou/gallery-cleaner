@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../models/footprint_asset.dart';
 import '../../../shared/theme/app_colors.dart';
+import 'footprint_pin.dart';
 
 class FootprintMap extends StatelessWidget {
   const FootprintMap({
@@ -39,7 +40,7 @@ class FootprintMap extends StatelessWidget {
             point: LatLng(asset.lat, asset.lng),
             width: 36,
             height: 36,
-            child: _FootprintPin(single: true),
+            child: const FootprintPin(single: true),
           ),
         )
         .toList();
@@ -73,7 +74,7 @@ class FootprintMap extends StatelessWidget {
                 size: const Size(44, 44),
                 markers: markers,
                 builder: (context, clusterMarkers) {
-                  return _FootprintPin(count: clusterMarkers.length);
+                  return FootprintPin(count: clusterMarkers.length);
                 },
                 onMarkerTap: (marker) {
                   final id = (marker.key as ValueKey<String>?)?.value;
@@ -107,45 +108,5 @@ class FootprintMap extends StatelessWidget {
     final lat = assets.fold<double>(0, (sum, a) => sum + a.lat) / assets.length;
     final lng = assets.fold<double>(0, (sum, a) => sum + a.lng) / assets.length;
     return LatLng(lat, lng);
-  }
-}
-
-class _FootprintPin extends StatelessWidget {
-  const _FootprintPin({this.count, this.single = false});
-
-  final int? count;
-  final bool single;
-
-  @override
-  Widget build(BuildContext context) {
-    final isCluster = count != null && count! > 1;
-    final size = isCluster ? 44.0 : 32.0;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.92),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: isCluster
-          ? Text(
-              '$count',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            )
-          : const Icon(Icons.location_on, color: Colors.white, size: 18),
-    );
   }
 }

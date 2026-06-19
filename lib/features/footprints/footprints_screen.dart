@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,7 @@ import 'widgets/footprint_empty_state.dart';
 import 'widgets/footprint_map.dart';
 import 'widgets/footprint_photo_sheet.dart';
 import 'widgets/footprint_poster.dart';
+import 'widgets/footprint_poster_map.dart';
 import 'widgets/footprint_skeleton.dart';
 
 class FootprintsScreen extends ConsumerStatefulWidget {
@@ -91,7 +94,8 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
   }
 
   Widget _buildBody(FootprintState state) {
-    final mapStyle = ref.watch(footprintMapStyleProvider);
+    final mapPreference = ref.watch(footprintMapStyleProvider);
+    final tileUrl = mapPreference.tileUrlFor(Theme.of(context).brightness);
     if (state.permission == PhotoPermissionStatus.denied) {
       return FootprintEmptyState(
         title: '需要读取照片位置',
@@ -130,7 +134,7 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
                   controller: _mapController,
                   assets: state.assets,
                   markersVisible: state.markersVisible,
-                  tileUrl: mapStyle.tileUrl,
+                  tileUrl: tileUrl,
                   onMarkerCityTap: (cityKey) => _openCity(cityKey, state),
                   onClusterAssetIds: (ids) => _openAssets(ids, state),
                 ),
@@ -181,42 +185,93 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
   }
 
   Future<void> _sharePoster(FootprintState state) async {
+    final tileUrl = ref
+        .read(footprintMapStyleProvider)
+        .tileUrlFor(Theme.of(context).brightness);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RepaintBoundary(
-                key: _posterKey,
-                child: FootprintPosterCard(
-                  cityCount: state.cities.length,
-                  momentCount: state.assets.length,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    await FootprintPosterShare.share(
-                      repaintKey: _posterKey,
-                      cityCount: state.cities.length,
-                      momentCount: state.assets.length,
-                    );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: const Text('分享海报'),
-                ),
-              ),
-            ],
+      builder: (ctx) => _PosterShareSheet(
+        posterKey: _posterKey,
+        state: state,
+        tileUrl: tileUrl,
+      ),
+    );
+  }
+}
+
+class _PosterShareSheet extends StatefulWidget {
+  const _PosterShareSheet({
+    required this.posterKey,
+    required this.state,
+    required this.tileUrl,
+  });
+
+  final GlobalKey posterKey;
+  final FootprintState state;
+  final String tileUrl;
+
+  @override
+  State<_PosterShareSheet> createState() => _PosterShareSheetState();
+}
+
+class _PosterShareSheetState extends State<_PosterShareSheet> {
+  final _mapCaptureKey = GlobalKey();
+  Uint8List? _mapSnapshot;
+  bool _mapLoading = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final mapReady = _mapSnapshot != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RepaintBoundary(
+            key: widget.posterKey,
+            child: FootprintPosterCard(
+              cityCount: widget.state.cities.length,
+              momentCount: widget.state.assets.length,
+              mapSnapshot: _mapSnapshot,
+              mapLoading: _mapLoading && !mapReady,
+              mapWidget: mapReady
+                  ? null
+                  : FootprintPosterMapCapture(
+                      repaintKey: _mapCaptureKey,
+                      assets: widget.state.assets,
+                      tileUrl: widget.tileUrl,
+                      onCaptured: (bytes) {
+                        if (!mounted) return;
+                        setState(() {
+                          _mapSnapshot = bytes;
+                          _mapLoading = false;
+                        });
+                      },
+                    ),
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: mapReady
+                  ? () async {
+                      await FootprintPosterShare.share(
+                        repaintKey: widget.posterKey,
+                        cityCount: widget.state.cities.length,
+                        momentCount: widget.state.assets.length,
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  : null,
+              child: Text(mapReady ? '分享海报' : '正在生成地图…'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

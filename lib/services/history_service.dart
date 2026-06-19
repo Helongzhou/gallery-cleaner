@@ -1,4 +1,5 @@
 import '../models/history_entry.dart';
+import '../models/history_session.dart';
 import '../models/process_action.dart';
 import '../models/swipe_action.dart';
 import '../shared/result.dart';
@@ -13,13 +14,22 @@ class HistoryService {
 
   Future<int> count() => _organize.historyCount();
 
-  Future<List<HistoryEntry>> loadEntries() async {
+  Future<Map<String, String>> _albumNames() async {
     final albumsResult = await _photo.listAlbums();
-    final albumNames = switch (albumsResult) {
+    return switch (albumsResult) {
       AppSuccess(:final value) => {for (final a in value) a.id: a.name},
       _ => <String, String>{},
     };
-    return _organize.getRecentHistory(albumNames: albumNames);
+  }
+
+  Future<List<HistorySession>> loadSessions() async {
+    final albumNames = await _albumNames();
+    return _organize.getRecentHistorySessions(albumNames: albumNames);
+  }
+
+  Future<List<HistoryEntry>> loadSessionEntries(String sessionId) async {
+    final albumNames = await _albumNames();
+    return _organize.getSessionHistory(sessionId: sessionId, albumNames: albumNames);
   }
 
   Future<AppResult<void>> undoEntry(int recordId) async {

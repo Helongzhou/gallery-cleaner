@@ -10,7 +10,7 @@ final footprintMapStyleProvider =
 });
 
 class FootprintMapStyleController extends StateNotifier<FootprintMapStyle> {
-  FootprintMapStyleController(this._settings) : super(FootprintMapStyle.dark) {
+  FootprintMapStyleController(this._settings) : super(FootprintMapStyle.system) {
     _load();
   }
 

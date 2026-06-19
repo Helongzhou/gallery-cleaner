@@ -108,7 +108,7 @@ class SettingsRepository {
       whereArgs: [_footprintMapStyleKey],
       limit: 1,
     );
-    if (rows.isEmpty) return FootprintMapStyle.dark;
+    if (rows.isEmpty) return FootprintMapStyle.system;
     return FootprintMapStyle.fromStorage(rows.first['value'] as String?);
   }
 

@@ -17,11 +17,15 @@ class FootprintPosterCard extends StatelessWidget {
     required this.cityCount,
     required this.momentCount,
     this.mapSnapshot,
+    this.mapWidget,
+    this.mapLoading = false,
   });
 
   final int cityCount;
   final int momentCount;
   final Uint8List? mapSnapshot;
+  final Widget? mapWidget;
+  final bool mapLoading;
 
   static const slogan = '每一步，都有迹可循';
 
@@ -96,13 +100,31 @@ class FootprintPosterCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.md),
             child: AspectRatio(
               aspectRatio: 16 / 10,
-              child: mapSnapshot != null
-                  ? Image.memory(mapSnapshot!, fit: BoxFit.cover)
-                  : Container(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (mapSnapshot != null)
+                    Image.memory(mapSnapshot!, fit: BoxFit.cover)
+                  else if (mapWidget != null)
+                    mapWidget!
+                  else
+                    Container(
                       color: mapPlaceholderColor,
                       alignment: Alignment.center,
                       child: Icon(Icons.map_outlined, color: mapIconColor, size: 48),
                     ),
+                  if (mapLoading)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      alignment: Alignment.center,
+                      child: const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),

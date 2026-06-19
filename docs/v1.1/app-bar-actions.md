@@ -6,7 +6,8 @@
 
 - 图标：`Icons.history`，有可撤销记录时显示红点
 - 右侧 55% 抽屉，`easeOutCubic` 300ms
-- SQLite 最近 50 条 `processed_records`
+- **时间线**：最近 20 次整理会话（来源→目标 · 整理/待删统计）
+- 点击会话 → 抽屉内二级展开该次照片列表
 - 逐条「反悔」：`pending_delete` 删标记；`organized` 从目标相册移除 + 删记录
 - 撤销后 `homeRefreshProvider` 刷新待整理/待删数字
 

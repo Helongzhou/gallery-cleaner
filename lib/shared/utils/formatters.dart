@@ -24,3 +24,14 @@ String formatRelativeScanTime(DateTime scannedAt, [DateTime? now]) {
   if (diff.inDays < 7) return '${diff.inDays} 天前';
   return '${scannedAt.month}月${scannedAt.day}日';
 }
+
+String formatHistorySessionTime(DateTime time, [DateTime? now]) {
+  final reference = now ?? DateTime.now();
+  final today = DateTime(reference.year, reference.month, reference.day);
+  final day = DateTime(time.year, time.month, time.day);
+  final hm =
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  if (day == today) return '今天 $hm';
+  if (day == today.subtract(const Duration(days: 1))) return '昨天 $hm';
+  return '${time.month}月${time.day}日 $hm';
+}

@@ -13,6 +13,7 @@ import '../../shared/theme/app_theme.dart';
 import '../../shared/widgets/app_segmented_control.dart';
 import '../../shared/widgets/large_title_header.dart';
 import '../../shared/widgets/top_toast.dart';
+import '../../shared/widgets/universal_modal.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -47,19 +48,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('开启生物识别保护'),
-        content: const Text('将调用系统 Face ID / 指纹验证。隐藏相册功能即将推出。'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('验证并开启')),
-        ],
-      ),
+    final confirmed = await UniversalModal.showAction(
+      context,
+      title: '开启生物识别保护',
+      content: '将调用系统 Face ID / 指纹验证。隐藏相册功能即将推出。',
+      primaryBtnText: '验证并开启',
     );
-    if (confirmed != true) return;
-    if (!mounted) return;
+    if (!confirmed || !mounted) return;
 
     await ref.read(biometricLockProvider.notifier).setEnabled(true);
     HapticFeedback.mediumImpact();

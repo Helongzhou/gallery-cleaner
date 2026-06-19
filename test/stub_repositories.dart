@@ -31,7 +31,7 @@ class StubSettingsRepository extends SettingsRepository {
   Future<bool> isBiometricLockEnabled() async => false;
 
   @override
-  Future<FootprintMapStyle> getFootprintMapStyle() async => FootprintMapStyle.dark;
+  Future<FootprintMapStyle> getFootprintMapStyle() async => FootprintMapStyle.system;
 }
 
 class StubOrganizeRepository extends OrganizeRepository {

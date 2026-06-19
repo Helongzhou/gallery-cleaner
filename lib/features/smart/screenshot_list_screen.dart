@@ -15,6 +15,7 @@ import '../../shared/theme/app_theme.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/glass_container.dart';
 import '../../shared/widgets/loading_view.dart';
+import '../../shared/widgets/universal_modal.dart';
 import '../../shared/widgets/waterfall_grid.dart';
 import '../../services/photo_library_service.dart';
 
@@ -76,22 +77,14 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
   Future<void> _cleanSelected() async {
     if (_selected.isEmpty) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(AppStrings.deleteConfirmTitle),
-        content: Text('将删除 ${_selected.length} 张截图，移入系统「最近删除」。'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.systemRed),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+    final confirmed = await UniversalModal.showAction(
+      context,
+      title: AppStrings.deleteConfirmTitle,
+      content: '将删除 ${_selected.length} 张截图，移入系统「最近删除」。',
+      primaryBtnText: '删除',
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     HapticFeedback.heavyImpact();
     final photoService = ref.read(photoLibraryServiceProvider);

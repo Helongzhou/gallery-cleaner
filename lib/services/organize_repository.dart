@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../models/active_session.dart';
 import '../models/history_entry.dart';
+import '../models/history_session.dart';
 import '../models/pending_delete_item.dart';
 import '../models/process_action.dart';
 import '../models/processed_record.dart';
@@ -77,6 +79,7 @@ class OrganizeRepository {
   }
 
   static const historyLimit = 50;
+  static const sessionHistoryLimit = 20;
 
   Future<int> historyCount() async {
     final db = await _db.database;
@@ -93,6 +96,103 @@ class OrganizeRepository {
       'processed_records',
       orderBy: 'processed_at DESC, id DESC',
       limit: limit,
+    );
+    return rows.map((row) {
+      final record = ProcessedRecord.fromMap(row);
+      return HistoryEntry(
+        record: record,
+        label: _historyLabel(record, albumNames),
+        targetAlbumName: record.targetAlbumId != null
+            ? albumNames[record.targetAlbumId!]
+            : null,
+      );
+    }).toList();
+  }
+
+  Future<List<HistorySession>> getRecentHistorySessions({
+    required Map<String, String> albumNames,
+    int limit = sessionHistoryLimit,
+  }) async {
+    final db = await _db.database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        p.session_id AS session_id,
+        MAX(p.processed_at) AS last_action_at,
+        SUM(CASE WHEN p.action = ? THEN 1 ELSE 0 END) AS organized_count,
+        SUM(CASE WHEN p.action = ? THEN 1 ELSE 0 END) AS delete_count
+      FROM processed_records p
+      WHERE p.session_id IS NOT NULL
+      GROUP BY p.session_id
+      ORDER BY last_action_at DESC
+      LIMIT ?
+      ''',
+      [
+        ProcessAction.organized.dbValue,
+        ProcessAction.pendingDelete.dbValue,
+        limit,
+      ],
+    );
+
+    final sessions = <HistorySession>[];
+    for (final row in rows) {
+      final sessionId = row['session_id'] as String;
+      final sessionRows = await db.query(
+        'sessions',
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
+        limit: 1,
+      );
+
+      late String sourceAlbumId;
+      late String targetAlbumId;
+      late DateTime startedAt;
+
+      if (sessionRows.isNotEmpty) {
+        final session = ActiveSession.fromMap(sessionRows.first);
+        sourceAlbumId = session.sourceAlbumId;
+        targetAlbumId = session.targetAlbumId;
+        startedAt = session.startedAt;
+      } else {
+        final recordRows = await db.query(
+          'processed_records',
+          where: 'session_id = ?',
+          whereArgs: [sessionId],
+          orderBy: 'processed_at ASC, id ASC',
+          limit: 1,
+        );
+        if (recordRows.isEmpty) continue;
+        final record = ProcessedRecord.fromMap(recordRows.first);
+        sourceAlbumId = record.sourceAlbumId;
+        targetAlbumId = record.targetAlbumId ?? record.sourceAlbumId;
+        startedAt = record.processedAt;
+      }
+
+      sessions.add(
+        HistorySession(
+          sessionId: sessionId,
+          startedAt: startedAt,
+          lastActionAt: DateTime.fromMillisecondsSinceEpoch(row['last_action_at'] as int),
+          sourceAlbumName: albumNames[sourceAlbumId] ?? '来源相册',
+          targetAlbumName: albumNames[targetAlbumId] ?? '目标相册',
+          organizedCount: row['organized_count'] as int? ?? 0,
+          deleteCount: row['delete_count'] as int? ?? 0,
+        ),
+      );
+    }
+    return sessions;
+  }
+
+  Future<List<HistoryEntry>> getSessionHistory({
+    required String sessionId,
+    required Map<String, String> albumNames,
+  }) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'processed_records',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+      orderBy: 'processed_at DESC, id DESC',
     );
     return rows.map((row) {
       final record = ProcessedRecord.fromMap(row);
