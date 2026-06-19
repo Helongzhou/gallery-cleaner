@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -42,6 +43,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
   int _processedInSession = 0;
   int _undosPerformed = 0;
   int _sessionActionCount = 0;
+  bool _sessionFinished = false;
 
   bool get _deleteOnly => widget.args.deleteOnly;
 
@@ -166,6 +168,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
         }
         return false;
       }
+      if (!mounted) return false;
       if (mounted) {
         TopToastInfo.show(context, '已归入「${widget.args.targetAlbumName}」');
       }
@@ -182,6 +185,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
         }
         return false;
       }
+      if (!mounted) return false;
       if (mounted) {
         TopToastInfo.show(context, '已标记删除');
       }
@@ -189,6 +193,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
       return false;
     }
 
+    if (!mounted) return false;
     setState(() {
       _processedInSession++;
       _sessionActionCount++;
@@ -230,6 +235,9 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
   }
 
   Future<void> _finishSession() async {
+    if (!mounted || _sessionFinished) return;
+    _sessionFinished = true;
+
     final sessionService = ref.read(sessionServiceProvider);
     final stats = await sessionService.getSessionStats(widget.args.sessionId);
     await sessionService.completeSession(widget.args.sessionId);
@@ -332,6 +340,7 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
                     child: CardSwiper(
                       controller: _swiperController,
                       cardsCount: _assets.length,
+                      numberOfCardsDisplayed: math.min(2, _assets.length),
                       onSwipe: _onSwipe,
                       allowedSwipeDirection: const AllowedSwipeDirection.symmetric(horizontal: true),
                       cardBuilder: (context, index, percentThresholdX, percentThresholdY) {

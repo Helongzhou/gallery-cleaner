@@ -48,6 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final Map<String, Uint8List?> _targetCovers = {};
   final Map<String, int> _pendingByAlbum = {};
   bool _restoredTarget = false;
+  late final LibraryTabController _libraryTab;
 
   bool get _isDeleteOnly => OrganizeMode.isDeleteOnly(_targetSelectionId);
 
@@ -62,12 +63,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _libraryTab = ref.read(libraryTabStateProvider.notifier);
     _load();
   }
 
   @override
   void dispose() {
-    ref.read(libraryTabStateProvider.notifier).setStartHandler(null);
+    _libraryTab.setStartHandler(null);
     super.dispose();
   }
 
@@ -175,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final canStart = _pendingOrganizeCount > 0 && _source != null && hasValidTarget;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(libraryTabStateProvider.notifier).updateTab(
+      _libraryTab.updateTab(
             canStart: canStart,
             buttonLabel: canStart ? AppStrings.startOrganize : AppStrings.allOrganized,
             onStart: canStart ? _start : null,

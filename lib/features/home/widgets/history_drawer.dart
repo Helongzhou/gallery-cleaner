@@ -41,9 +41,17 @@ class _HistoryDrawerPanel extends ConsumerStatefulWidget {
 }
 
 class _HistoryDrawerPanelState extends ConsumerState<_HistoryDrawerPanel> {
+  late final HistoryController _historyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyController = ref.read(historyProvider.notifier);
+  }
+
   @override
   void dispose() {
-    ref.read(historyProvider.notifier).closeSession();
+    _historyController.closeSession();
     super.dispose();
   }
 

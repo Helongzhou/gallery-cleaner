@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/pending_delete_item.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/providers.dart';
 import '../../router/routes.dart';
 import '../../shared/constants/strings.dart';
@@ -94,6 +95,7 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
   Future<void> _restoreSelected() async {
     if (_selected.isEmpty) return;
     await ref.read(organizeRepositoryProvider).removePendingDelete(_selected.toList());
+    ref.read(homeRefreshProvider.notifier).state++;
     await _load();
   }
 
@@ -121,6 +123,7 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
 
     final deleteResult = (result as AppSuccess<DeleteResult>).value;
     await ref.read(organizeRepositoryProvider).removePendingDelete(deleteResult.successIds);
+    ref.read(homeRefreshProvider.notifier).state++;
 
     final message = deleteResult.failedIds.isEmpty
         ? '已删除 ${deleteResult.successIds.length} 张'
