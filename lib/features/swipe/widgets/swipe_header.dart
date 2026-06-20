@@ -34,24 +34,12 @@ class SwipeHeader extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    SizedBox(
-                      width: 72,
-                      child: TextButton.icon(
-                        onPressed: onBack,
-                        icon: Icon(Icons.chevron_left, color: context.appPrimary, size: 28),
-                        label: Text('返回', style: TextStyle(color: context.appPrimary)),
-                      ),
+                    IconButton(
+                      onPressed: onBack,
+                      icon: Icon(Icons.chevron_left, color: context.appPrimary, size: 28),
+                      tooltip: '返回',
                     ),
-                    SizedBox(
-                      width: 72,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.more_horiz, color: context.appPrimary),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: 48),
                   ],
                 ),
                 Column(

@@ -20,7 +20,7 @@ class TopToast {
   }) {
     dismiss();
 
-    final overlay = Overlay.of(context);
+    final overlay = Overlay.of(context, rootOverlay: true);
     final top = MediaQuery.paddingOf(context).top;
 
     _entry = OverlayEntry(
@@ -96,7 +96,7 @@ class TopToastInfo {
     TopToast.dismiss();
     _entry?.remove();
 
-    final overlay = Overlay.of(context);
+    final overlay = Overlay.of(context, rootOverlay: true);
     final top = MediaQuery.paddingOf(context).top;
 
     _entry = OverlayEntry(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/library_tab_state.dart';
 import '../../router/routes.dart';
+import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/widgets/glass_container.dart';
 import '../../shared/widgets/primary_button.dart';
@@ -65,7 +66,7 @@ class MainShell extends ConsumerWidget {
               NavigationDestination(
                 icon: Icon(Icons.photo_library_outlined),
                 selectedIcon: Icon(Icons.photo_library),
-                label: '相库',
+                label: AppStrings.organizeTabLabel,
               ),
               NavigationDestination(
                 icon: Icon(Icons.auto_awesome_outlined),

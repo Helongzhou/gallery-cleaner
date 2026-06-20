@@ -1,25 +1,71 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:permission_handler/permission_handler.dart' as ph;
-import 'package:photo_manager/photo_manager.dart';
-
 import 'package:photo_manager/photo_manager.dart';
 
 import '../models/footprint_asset.dart';
 import '../models/album_info.dart';
 import '../models/photo_asset_info.dart';
 import '../models/photo_permission_status.dart';
+import '../shared/constants/organize_constants.dart';
 import '../shared/result.dart';
 
 class PhotoLibraryService {
+  /// 1×1 transparent PNG used to create Android album buckets.
+  static final Uint8List _androidAlbumPlaceholder = Uint8List.fromList(const <int>[
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+    0x42, 0x60, 0x82,
+  ]);
+
   Future<PhotoPermissionStatus> getPermissionStatus() async {
     final state = await PhotoManager.requestPermissionExtend();
     return _mapPermission(state);
   }
 
   Future<PhotoPermissionStatus> requestPermission() async {
-    final state = await PhotoManager.requestPermissionExtend();
+    final state = await PhotoManager.requestPermissionExtend(
+      requestOption: _photoPermissionOption(includeMediaLocation: false),
+    );
     return _mapPermission(state);
+  }
+
+  /// Android 10+ needs ACCESS_MEDIA_LOCATION to read GPS from photos.
+  Future<void> ensureMediaLocationAccess() async {
+    if (!Platform.isAndroid) return;
+    await PhotoManager.requestPermissionExtend(
+      requestOption: _photoPermissionOption(includeMediaLocation: true),
+    );
+  }
+
+  PermissionRequestOption _photoPermissionOption({required bool includeMediaLocation}) {
+    if (Platform.isAndroid) {
+      return PermissionRequestOption(
+        androidPermission: AndroidPermission(
+          type: RequestType.common,
+          mediaLocation: includeMediaLocation,
+        ),
+      );
+    }
+    return const PermissionRequestOption();
+  }
+
+  Future<({double? lat, double? lng})> _resolveAssetLocation(AssetEntity asset) async {
+    var lat = asset.latitude;
+    var lng = asset.longitude;
+    if (lat != null && lng != null && !(lat == 0 && lng == 0)) {
+      return (lat: lat, lng: lng);
+    }
+    try {
+      final latLng = await asset.latlngAsync();
+      if (latLng != null) {
+        return (lat: latLng.latitude, lng: latLng.longitude);
+      }
+    } catch (_) {}
+    return (lat: null, lng: null);
   }
 
   PhotoPermissionStatus _mapPermission(PermissionState state) {
@@ -33,6 +79,7 @@ class PhotoLibraryService {
   }
 
   Future<void> presentLimitedLibraryPicker() async {
+    if (!Platform.isIOS && !Platform.isAndroid) return;
     await PhotoManager.presentLimited();
   }
 
@@ -64,10 +111,21 @@ class PhotoLibraryService {
 
   bool _isWritableAlbum(AssetPathEntity path) {
     if (path.isAll) return false;
-    if (path.albumType == 2) return false;
-    final darwinType = path.albumTypeEx?.darwin?.type;
-    if (darwinType == PMDarwinAssetCollectionType.smartAlbum) return false;
-    return true;
+
+    if (Platform.isIOS || Platform.isMacOS) {
+      if (path.albumType == 2) return false;
+      final darwinType = path.albumTypeEx?.darwin?.type;
+      if (darwinType == PMDarwinAssetCollectionType.smartAlbum) return false;
+      return true;
+    }
+
+    if (Platform.isAndroid) {
+      final lower = path.name.toLowerCase();
+      if (lower == 'download' || lower == 'downloads' || lower == '下载') return false;
+      return true;
+    }
+
+    return !path.isAll;
   }
 
   Future<bool> isAssetInAlbum(String assetId, String albumId) async {
@@ -82,6 +140,10 @@ class PhotoLibraryService {
 
   Future<AppResult<AlbumInfo>> createAlbum(String name) async {
     try {
+      if (name.length > OrganizeConstants.maxAlbumNameLength) {
+        return AppFailure('相册名不能超过 ${OrganizeConstants.maxAlbumNameLength} 个字');
+      }
+
       final existing = await listAlbums();
       if (existing is AppSuccess<List<AlbumInfo>>) {
         final duplicate = existing.value.any((a) => a.name == name);
@@ -90,17 +152,47 @@ class PhotoLibraryService {
         }
       }
 
-      final path = await PhotoManager.editor.darwin.createAlbum(name);
-      if (path == null) {
-        return const AppFailure('创建相册失败');
+      if (Platform.isIOS || Platform.isMacOS) {
+        return _createAlbumDarwin(name);
       }
-      final count = await path.assetCountAsync;
-      return AppSuccess(
-        AlbumInfo(id: path.id, name: path.name, assetCount: count),
-      );
+      if (Platform.isAndroid) {
+        return _createAlbumAndroid(name);
+      }
+      return const AppFailure('当前平台不支持创建相册');
     } catch (e) {
       return AppFailure('创建相册失败', cause: e);
     }
+  }
+
+  Future<AppResult<AlbumInfo>> _createAlbumDarwin(String name) async {
+    final path = await PhotoManager.editor.darwin.createAlbum(name);
+    if (path == null) {
+      return const AppFailure('创建相册失败');
+    }
+    final count = await path.assetCountAsync;
+    return AppSuccess(
+      AlbumInfo(id: path.id, name: path.name, assetCount: count, isWritable: true),
+    );
+  }
+
+  Future<AppResult<AlbumInfo>> _createAlbumAndroid(String name) async {
+    await PhotoManager.editor.saveImage(
+      _androidAlbumPlaceholder,
+      filename: '.album_placeholder.png',
+      title: '.album_placeholder',
+      relativePath: 'Pictures/$name',
+    );
+
+    final paths = await PhotoManager.getAssetPathList(type: RequestType.image, hasAll: true);
+    for (final path in paths) {
+      if (path.name == name) {
+        final count = await path.assetCountAsync;
+        return AppSuccess(
+          AlbumInfo(id: path.id, name: path.name, assetCount: count, isWritable: true),
+        );
+      }
+    }
+    return const AppFailure('创建相册失败，请检查存储权限');
   }
 
   Future<AppResult<List<PhotoAssetInfo>>> getAssets({
@@ -190,7 +282,7 @@ class PhotoLibraryService {
     }
 
     try {
-      final deletedIds = await PhotoManager.editor.deleteWithIds(assetIds);
+      final deletedIds = await _deleteAssetIds(assetIds);
       final deletedSet = deletedIds.toSet();
       final failed = assetIds.where((id) => !deletedSet.contains(id)).toList();
       return AppSuccess(
@@ -199,6 +291,46 @@ class PhotoLibraryService {
     } catch (e) {
       return AppFailure('删除照片失败', cause: e);
     }
+  }
+
+  Future<List<String>> _deleteAssetIds(List<String> assetIds) async {
+    if (Platform.isAndroid) {
+      final sdk = int.tryParse(await PhotoManager.systemVersion()) ?? 0;
+      if (sdk >= 30) {
+        final entities = <AssetEntity>[];
+        for (final id in assetIds) {
+          final entity = await AssetEntity.fromId(id);
+          if (entity != null) {
+            entities.add(entity);
+          }
+        }
+        if (entities.isEmpty) {
+          return const [];
+        }
+        final trashed = await PhotoManager.editor.android.moveToTrash(entities);
+        if (trashed.isNotEmpty) {
+          return trashed;
+        }
+        return PhotoManager.editor.deleteWithIds(assetIds);
+      }
+    }
+    return PhotoManager.editor.deleteWithIds(assetIds);
+  }
+
+  Future<({List<String> existing, List<String> stale})> partitionExistingAssetIds(
+    List<String> assetIds,
+  ) async {
+    final existing = <String>[];
+    final stale = <String>[];
+    for (final id in assetIds) {
+      final entity = await AssetEntity.fromId(id);
+      if (entity == null) {
+        stale.add(id);
+      } else {
+        existing.add(id);
+      }
+    }
+    return (existing: existing, stale: stale);
   }
 
   Future<List<PhotoAssetInfo>> getAssetsByIds(List<String> assetIds) async {
@@ -325,14 +457,55 @@ class PhotoLibraryService {
       final album = await _findAlbum(albumId);
       if (asset == null) return const AppFailure('找不到该照片');
       if (album == null) return const AppFailure('找不到目标相册');
-      final removed = await PhotoManager.editor.darwin.removeInAlbum(asset, album);
-      if (!removed) {
-        return const AppFailure('无法从相册移除照片');
+
+      if (Platform.isIOS || Platform.isMacOS) {
+        final removed = await PhotoManager.editor.darwin.removeInAlbum(asset, album);
+        if (!removed) {
+          return const AppFailure('无法从相册移除照片');
+        }
+        return const AppSuccess(null);
       }
-      return const AppSuccess(null);
+
+      if (Platform.isAndroid) {
+        final copy = await _findCopiedAssetInAlbum(
+          sourceAssetId: assetId,
+          album: album,
+          source: asset,
+        );
+        if (copy == null) {
+          return const AppFailure('无法从相册移除照片');
+        }
+        final deleted = await PhotoManager.editor.deleteWithIds([copy.id]);
+        if (deleted.isEmpty) {
+          return const AppFailure('无法从相册移除照片');
+        }
+        return const AppSuccess(null);
+      }
+
+      return const AppFailure('当前平台不支持从相册移除照片');
     } catch (e) {
       return AppFailure('从相册移除失败', cause: e);
     }
+  }
+
+  Future<AssetEntity?> _findCopiedAssetInAlbum({
+    required String sourceAssetId,
+    required AssetPathEntity album,
+    required AssetEntity source,
+  }) async {
+    final count = await album.assetCountAsync;
+    if (count == 0) return null;
+    final end = count > 500 ? 500 : count;
+    final assets = await album.getAssetListRange(start: 0, end: end);
+    for (final candidate in assets) {
+      if (candidate.id == sourceAssetId) continue;
+      if (candidate.width == source.width &&
+          candidate.height == source.height &&
+          candidate.createDateTime == source.createDateTime) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   /// Scans all accessible photos/videos for GPS coordinates (batched, non-blocking).
@@ -340,6 +513,8 @@ class PhotoLibraryService {
     void Function(int processed, int total)? onProgress,
   }) async {
     try {
+      await ensureMediaLocationAccess();
+
       final paths = await PhotoManager.getAssetPathList(
         type: RequestType.common,
         hasAll: true,
@@ -366,8 +541,9 @@ class PhotoLibraryService {
         final end = (start + batchSize > count) ? count : start + batchSize;
         final assets = await allAlbum.getAssetListRange(start: start, end: end);
         for (final asset in assets) {
-          final lat = asset.latitude;
-          final lng = asset.longitude;
+          final coords = await _resolveAssetLocation(asset);
+          final lat = coords.lat;
+          final lng = coords.lng;
           if (lat == null || lng == null || (lat == 0 && lng == 0)) {
             withoutGps++;
             continue;
@@ -397,16 +573,28 @@ class PhotoLibraryService {
       hasAll: true,
     );
     for (final path in paths) {
-      final subtype = path.albumTypeEx?.darwin?.subtype;
-      if (subtype == PMDarwinAssetCollectionSubtype.smartAlbumScreenshots) {
-        return path;
+      if (Platform.isIOS || Platform.isMacOS) {
+        final subtype = path.albumTypeEx?.darwin?.subtype;
+        if (subtype == PMDarwinAssetCollectionSubtype.smartAlbumScreenshots) {
+          return path;
+        }
       }
+
       final name = path.name.toLowerCase();
-      if (name.contains('screenshot') || name.contains('截屏') || name.contains('屏幕快照')) {
+      if (_isScreenshotsAlbumName(name)) {
         return path;
       }
     }
     return null;
+  }
+
+  bool _isScreenshotsAlbumName(String lowerName) {
+    return lowerName.contains('screenshot') ||
+        lowerName.contains('screen shot') ||
+        lowerName.contains('screen_shot') ||
+        lowerName.contains('截屏') ||
+        lowerName.contains('屏幕快照') ||
+        lowerName == 'screenshots';
   }
 }
 

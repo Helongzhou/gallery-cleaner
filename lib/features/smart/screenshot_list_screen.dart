@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/photo_asset_info.dart';
 import '../../models/screenshot_bucket.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/providers.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/result.dart';
@@ -34,6 +36,8 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
   final Set<String> _selected = {};
   final Map<String, Uint8List?> _thumbnails = {};
   final Map<String, int> _fileSizes = {};
+  final Set<String> _loadingThumbs = {};
+  final Set<String> _loadingSizes = {};
 
   @override
   void initState() {
@@ -44,17 +48,7 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final scanService = ref.read(screenshotScanServiceProvider);
-    final photoService = ref.read(photoLibraryServiceProvider);
     final assets = await scanService.getAssets(widget.bucket);
-
-    for (final asset in assets) {
-      _thumbnails[asset.id] = await photoService.getThumbnail(
-        assetId: asset.id,
-        width: 240,
-        height: 240,
-      );
-      _fileSizes[asset.id] = await photoService.getAssetFileSize(asset.id) ?? 0;
-    }
 
     if (!mounted) return;
     setState(() {
@@ -63,6 +57,37 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
       _selected
         ..clear()
         ..addAll(assets.map((a) => a.id));
+    });
+
+    for (var i = 0; i < assets.length && i < 24; i++) {
+      _ensureThumbnail(assets[i].id);
+    }
+    for (final asset in assets) {
+      _ensureFileSize(asset.id);
+    }
+  }
+
+  void _ensureThumbnail(String assetId) {
+    if (_thumbnails.containsKey(assetId) || _loadingThumbs.contains(assetId)) return;
+    _loadingThumbs.add(assetId);
+    ref.read(photoLibraryServiceProvider).getThumbnail(
+          assetId: assetId,
+          width: 240,
+          height: 240,
+        ).then((bytes) {
+      if (!mounted) return;
+      setState(() => _thumbnails[assetId] = bytes);
+      _loadingThumbs.remove(assetId);
+    });
+  }
+
+  void _ensureFileSize(String assetId) {
+    if (_fileSizes.containsKey(assetId) || _loadingSizes.contains(assetId)) return;
+    _loadingSizes.add(assetId);
+    ref.read(photoLibraryServiceProvider).getAssetFileSize(assetId).then((size) {
+      if (!mounted) return;
+      setState(() => _fileSizes[assetId] = size ?? 0);
+      _loadingSizes.remove(assetId);
     });
   }
 
@@ -80,7 +105,10 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
     final confirmed = await UniversalModal.showAction(
       context,
       title: AppStrings.deleteConfirmTitle,
-      content: '将删除 ${_selected.length} 张截图，移入系统「最近删除」。',
+      content: AppStrings.deleteConfirmScreenshots(
+        _selected.length,
+        android: Platform.isAndroid,
+      ),
       primaryBtnText: '删除',
       destructive: true,
     );
@@ -96,10 +124,44 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
       return;
     }
 
+    final deleteResult = (result as AppSuccess<DeleteResult>).value;
+    if (deleteResult.successIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.deleteNothingMessage)),
+      );
+      return;
+    }
+
+    if (deleteResult.failedIds.isNotEmpty) {
+      final successSet = deleteResult.successIds.toSet();
+      setState(() {
+        _assets.removeWhere((asset) => successSet.contains(asset.id));
+        _selected.removeAll(successSet);
+        for (final id in successSet) {
+          _thumbnails.remove(id);
+          _fileSizes.remove(id);
+        }
+      });
+      ref.read(smartRefreshProvider.notifier).state++;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.deletePartialMessage(
+              deleteResult.successIds.length,
+              deleteResult.failedIds.length,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     await ref.read(screenshotCacheRepositoryProvider).clearAll();
-    if (!mounted) return;
+    ref.read(smartRefreshProvider.notifier).state++;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已清理 ${(result as AppSuccess<DeleteResult>).value.successIds.length} 张截图')),
+      SnackBar(
+        content: Text(AppStrings.screenshotCleanSuccessMessage(deleteResult.successIds.length)),
+      ),
     );
     if (context.canPop()) {
       context.pop();
@@ -143,7 +205,9 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
                         },
                         itemBuilder: (context, index) {
                           final asset = _assets[index];
+                          _ensureThumbnail(asset.id);
                           final selected = _selected.contains(asset.id);
+                          final bytes = _thumbnails[asset.id];
 
                           return GestureDetector(
                             onTap: () {
@@ -160,9 +224,18 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
                                   child: SizedBox.expand(
-                                    child: _thumbnails[asset.id] != null
-                                        ? Image.memory(_thumbnails[asset.id]!, fit: BoxFit.cover)
-                                        : ColoredBox(color: context.appSurfaceContainerHigh),
+                                    child: bytes != null
+                                        ? Image.memory(bytes, fit: BoxFit.cover)
+                                        : ColoredBox(
+                                            color: context.appSurfaceContainerHigh,
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                 ),
                                 if (selected)

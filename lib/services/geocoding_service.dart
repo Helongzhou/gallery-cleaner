@@ -2,7 +2,7 @@ import 'package:geocoding/geocoding.dart';
 
 import '../models/geocode_result.dart';
 
-/// Reverse geocoding via iOS CLGeocoder. Results are cached in memory by cell.
+/// Reverse geocoding with on-device geocoder. Results are cached in memory by cell.
 class GeocodingService {
   final Map<String, GeocodeResult> _cache = {};
 

@@ -23,6 +23,7 @@ abstract final class UniversalModal {
   }) async {
     final result = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: closeOnOverlayClick,
       barrierColor: Colors.transparent,
       builder: (context) => _UniversalModalView(
@@ -49,6 +50,7 @@ abstract final class UniversalModal {
   }) async {
     final result = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: closeOnOverlayClick,
       barrierColor: Colors.transparent,
       builder: (context) => _UniversalModalView(

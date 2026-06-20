@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../models/screenshot_bucket.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/providers.dart';
 import '../../router/routes.dart';
 import '../../shared/constants/strings.dart';
@@ -63,6 +64,10 @@ class _SmartScreenState extends ConsumerState<SmartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(smartRefreshProvider, (previous, next) {
+      if (previous != next) _load(forceRefresh: true);
+    });
+
     final count = _counts[_selectedBucket] ?? 0;
     final scheme = Theme.of(context).colorScheme;
     final scanning = _loading || _deepScanning;
@@ -107,12 +112,6 @@ class _SmartScreenState extends ConsumerState<SmartScreen> {
                         icon: Icons.photo_library_outlined,
                         title: '相似照片',
                         subtitle: '智能聚类，释放重复占用空间',
-                      ),
-                      const SizedBox(height: AppSpacing.stackMedium),
-                      const SmartComingSoonCard(
-                        icon: Icons.videocam_outlined,
-                        title: '超大视频',
-                        subtitle: '找出占用空间的大体积视频',
                       ),
                       const SizedBox(height: AppSpacing.stackLoose),
                       Container(

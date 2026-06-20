@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,15 +107,31 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
     final confirmed = await UniversalModal.showAction(
       context,
       title: AppStrings.deleteConfirmTitle,
-      content: AppStrings.deleteConfirmBody,
-      primaryBtnText: '删除',
+      content: AppStrings.deleteConfirmContent(android: Platform.isAndroid),
+      primaryBtnText: AppStrings.confirmDelete,
       destructive: true,
     );
     if (!confirmed || !mounted) return;
 
     HapticFeedback.heavyImpact();
     final photoService = ref.read(photoLibraryServiceProvider);
-    final result = await photoService.deleteAssets(_selected.toList());
+    final partitioned = await photoService.partitionExistingAssetIds(_selected.toList());
+    if (!mounted) return;
+
+    if (partitioned.stale.isNotEmpty) {
+      await ref.read(organizeRepositoryProvider).removePendingDelete(partitioned.stale);
+      ref.read(homeRefreshProvider.notifier).state++;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.pendingDeleteStaleRemovedMessage(partitioned.stale.length))),
+      );
+    }
+
+    if (partitioned.existing.isEmpty) {
+      await _load();
+      return;
+    }
+
+    final result = await photoService.deleteAssets(partitioned.existing);
     if (!mounted) return;
 
     if (result is AppFailure<DeleteResult>) {
@@ -122,13 +140,22 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
     }
 
     final deleteResult = (result as AppSuccess<DeleteResult>).value;
+    if (deleteResult.successIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.deleteNothingMessage)),
+      );
+      return;
+    }
+
     await ref.read(organizeRepositoryProvider).removePendingDelete(deleteResult.successIds);
     ref.read(homeRefreshProvider.notifier).state++;
 
     final message = deleteResult.failedIds.isEmpty
-        ? '已删除 ${deleteResult.successIds.length} 张'
-        : '成功 ${deleteResult.successIds.length} 张，失败 ${deleteResult.failedIds.length} 张';
-    if (!mounted) return;
+        ? AppStrings.deleteSuccessMessage(deleteResult.successIds.length)
+        : AppStrings.deletePartialMessage(
+            deleteResult.successIds.length,
+            deleteResult.failedIds.length,
+          );
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     await _load();
   }
@@ -272,14 +299,14 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
                             minimumSize: const Size(0, 48),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text(AppStrings.deletePermanently),
+                          child: const Text(AppStrings.confirmDelete),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '彻底删除后，照片将移入系统「最近删除」相册',
+                    AppStrings.pendingDeleteTrashHint(android: Platform.isAndroid),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),

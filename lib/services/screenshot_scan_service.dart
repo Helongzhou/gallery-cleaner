@@ -52,7 +52,9 @@ class ScreenshotScanService {
 
     final assets = (result as AppSuccess<List<PhotoAssetInfo>>).value;
     final ids = assets.map((a) => a.id).toList();
-    await _cache.save(bucket, ids);
+    if (ids.isNotEmpty) {
+      await _cache.save(bucket, ids);
+    }
     return ids;
   }
 }

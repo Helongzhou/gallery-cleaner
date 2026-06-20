@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/footprint_map_style.dart';
 import '../../models/theme_preference.dart';
+import '../../providers/history_provider.dart';
+import '../../providers/home_provider.dart';
 import '../../providers/providers.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/footprint_provider.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_theme.dart';
@@ -42,34 +45,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Future<void> _onBiometricToggle(bool value) async {
-    if (!value) {
-      await ref.read(biometricLockProvider.notifier).setEnabled(false);
-      return;
-    }
-
-    final confirmed = await UniversalModal.showAction(
-      context,
-      title: '开启生物识别保护',
-      content: '将调用系统 Face ID / 指纹验证。隐藏相册功能即将推出。',
-      primaryBtnText: '验证并开启',
-    );
-    if (!confirmed || !mounted) return;
-
-    await ref.read(biometricLockProvider.notifier).setEnabled(true);
-    HapticFeedback.mediumImpact();
-    TopToastInfo.show(context, '已开启（隐藏相册功能即将推出）');
-  }
-
   Future<void> _clearCache() async {
     await ref.read(cacheClearServiceProvider).clearScanCaches();
     HapticFeedback.mediumImpact();
     await _loadCacheInfo();
-    if (mounted) TopToastInfo.show(context, '已清除扫描缓存');
+    if (mounted) TopToastInfo.show(context, AppStrings.clearScanCacheSuccess);
+  }
+
+  Future<void> _resetOrganizeProgress() async {
+    final confirmed = await UniversalModal.showAction(
+      context,
+      title: AppStrings.resetOrganizeTitle,
+      content: AppStrings.resetOrganizeBody,
+      primaryBtnText: AppStrings.resetOrganizeConfirm,
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final stats = await ref.read(cacheClearServiceProvider).resetOrganizeProgress();
+    ref.read(homeRefreshProvider.notifier).state++;
+    ref.read(smartRefreshProvider.notifier).state++;
+    await ref.read(homeControllerProvider.notifier).load(silent: true);
+    ref.read(homeControllerProvider.notifier).refreshLibraryTabState();
+    await ref.read(footprintControllerProvider.notifier).load(forceRefresh: true);
+    await ref.read(historyProvider.notifier).refresh();
+    HapticFeedback.heavyImpact();
+    await _loadCacheInfo();
+    if (mounted) {
+      TopToastInfo.show(
+        context,
+        AppStrings.resetOrganizeSuccessDetail(
+          processedCount: stats.processedCount,
+          pendingDeleteCount: stats.pendingDeleteCount,
+        ),
+      );
+    }
   }
 
   Future<void> _sendFeedback() async {
-    const email = 'feedback@albumorganizer.app';
+    const email = 'zhouhlwork@foxmail.com';
     await Clipboard.setData(ClipboardData(text: email));
     if (mounted) {
       TopToastInfo.show(context, '反馈邮箱已复制：$email');
@@ -80,7 +94,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final themePreference = ref.watch(themePreferenceProvider);
     final mapStyle = ref.watch(footprintMapStyleProvider);
-    final biometric = ref.watch(biometricLockProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -134,24 +147,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _SectionTitle('隐私安全'),
-                  _SettingsCard(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Face ID / 指纹保护隐藏相册'),
-                        subtitle: Text(
-                          '开启后需生物识别验证（功能即将推出）',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                        value: biometric,
-                        onChanged: _onBiometricToggle,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _SectionTitle('缓存管理'),
+                  _SectionTitle(AppStrings.dataManagementSection),
                   _SettingsCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,13 +158,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '清除截图与足迹扫描缓存，不影响整理记录',
+                          AppStrings.clearScanCacheHint,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: _clearCache,
-                          child: const Text('清除应用缓存'),
+                          child: const Text(AppStrings.clearScanCacheLabel),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          '清空整理进度与扫描缓存，让照片重新出现在待整理列表中。',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: _resetOrganizeProgress,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.systemRed,
+                            side: const BorderSide(color: AppColors.systemRed),
+                          ),
+                          child: const Text(AppStrings.resetOrganizeLabel),
                         ),
                       ],
                     ),

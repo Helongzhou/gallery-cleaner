@@ -307,6 +307,15 @@ class OrganizeRepository {
     );
   }
 
+  Future<void> resetAllOrganizeState() async {
+    final db = await _db.database;
+    await db.transaction((txn) async {
+      await txn.delete('processed_records');
+      await txn.delete('pending_delete');
+      await txn.delete('sessions');
+    });
+  }
+
   Future<List<PendingDeleteItem>> getPendingDelete() async {
     final db = await _db.database;
     final rows = await db.query(

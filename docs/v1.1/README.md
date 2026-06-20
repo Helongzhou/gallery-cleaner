@@ -57,7 +57,7 @@
 - **Local-First**：截图/足迹扫描、逆地理、整理记录均在设备本地
 - **异步**：扫描走 Isolate；算体积不阻塞 UI
 - **UI**：圆角 16、Large Title、玻璃 Tab Bar、`AppSpacing` / `AppRadius` token
-- **平台**：iOS only
+- **平台**：iOS 13+ · Android 10+（API 29）
 
 ## 测试
 

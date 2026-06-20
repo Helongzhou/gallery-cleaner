@@ -14,7 +14,7 @@ abstract final class AppStrings {
   static const undo = '撤销';
   static String undoWithCount(int count) => '撤销 ($count)';
   static const removeFromPending = '移出待删';
-  static const deletePermanently = '彻底删除';
+  static const organizeTabLabel = '整理';
   static const smartCleanup = '智能清理';
   static const smartPrivacyNote = '所有分析均在本地完成，不会上传至服务器';
   static const profileTitle = '我的';
@@ -34,8 +34,65 @@ abstract final class AppStrings {
   static const selectAll = '全选';
   static const deselectAll = '取消全选';
   static const deleteConfirmTitle = '确认删除照片？';
-  static const deleteConfirmBody =
+  static const deleteConfirmIosNote =
       '照片将移入系统「最近删除」，30 天内可在系统相册中恢复。';
+  static const deleteConfirmAndroidNote =
+      '照片将移入系统回收站，可在系统相册中恢复或清空。';
+  static const deleteConfirmAndroidSystemHint =
+      '随后将弹出系统确认，请点击「允许」完成删除。';
+  static const deleteNothingMessage = '未删除任何照片，请在系统弹窗中点允许';
+  static const deleteConfirmBody = deleteConfirmIosNote;
+
+  static String deleteConfirmContent({bool android = false}) {
+    final note = android ? deleteConfirmAndroidNote : deleteConfirmIosNote;
+    if (android) {
+      return '$note\n$deleteConfirmAndroidSystemHint';
+    }
+    return note;
+  }
+
+  static String deleteConfirmScreenshots(int count, {bool android = false}) {
+    final destination = android ? '系统回收站' : '系统「最近删除」';
+    final base = '将删除 $count 张截图，移入$destination。';
+    if (android) {
+      return '$base\n$deleteConfirmAndroidSystemHint';
+    }
+    return base;
+  }
+
+  static String pendingDeleteTrashHint({bool android = false}) {
+    if (android) {
+      return '确认删除后，照片将移入系统回收站，可在系统相册中恢复或清空。';
+    }
+    return '确认删除后，照片将移入系统「最近删除」，30 天内可恢复。';
+  }
+
+  static String deletePartialMessage(int successCount, int failedCount) =>
+      '成功 $successCount 张，失败 $failedCount 张';
+
+  static String deleteSuccessMessage(int count) => '已删除 $count 张';
+
+  static String pendingDeleteStaleRemovedMessage(int count) =>
+      '$count 张照片已不在相册，已从待删除列表移除';
+
+  static String screenshotCleanSuccessMessage(int count) => '已清理 $count 张截图';
+  static const resetOrganizeTitle = '重置整理记录？';
+  static const resetOrganizeBody =
+      '将清空所有整理进度、待删除列表和扫描缓存。\n'
+      '手机相册里的照片不会被删除或移动，可重新开始整理。';
+  static const resetOrganizeConfirm = '重置';
+  static const resetOrganizeSuccess = '已重置，可重新开始整理';
+
+  static String resetOrganizeSuccessDetail({
+    required int processedCount,
+    required int pendingDeleteCount,
+  }) =>
+      '已重置：整理记录 $processedCount 条，待删除 $pendingDeleteCount 条，扫描缓存已清空';
+  static const clearScanCacheHint = '仅清除截图与足迹扫描缓存，不影响整理记录';
+  static const clearScanCacheSuccess = '已清除扫描缓存';
+  static const resetOrganizeLabel = '重置整理记录';
+  static const clearScanCacheLabel = '清除扫描缓存';
+  static const dataManagementSection = '数据管理';
   static const limitedAccessHint = '当前仅可访问部分照片';
   static const addMorePhotos = '添加更多照片';
   static const permissionDeniedTitle = '需要相册权限';

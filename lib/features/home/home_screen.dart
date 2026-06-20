@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../models/album_info.dart';
 import '../../models/photo_permission_status.dart';
 import '../../providers/history_provider.dart';
+import '../../providers/home_provider.dart';
 import '../../providers/library_tab_state.dart';
 import '../../providers/providers.dart';
 import '../../router/app_router.dart';
 import '../../router/routes.dart';
+import '../../shared/constants/organize_constants.dart';
 import '../../shared/constants/organize_mode.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/result.dart';
@@ -34,37 +34,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  bool _loading = true;
-  String? _error;
-  PhotoPermissionStatus? _permission;
-  List<AlbumInfo> _allAlbums = [];
-  List<AlbumInfo> _writableAlbums = [];
-  AlbumInfo? _source;
-  String _targetSelectionId = OrganizeMode.deleteOnlyTargetId;
-  int _pendingDeleteCount = 0;
-  int _pendingOrganizeCount = 0;
-  String? _activeSessionHint;
-  Uint8List? _sourceCover;
-  final Map<String, Uint8List?> _targetCovers = {};
-  final Map<String, int> _pendingByAlbum = {};
-  bool _restoredTarget = false;
   late final LibraryTabController _libraryTab;
-
-  bool get _isDeleteOnly => OrganizeMode.isDeleteOnly(_targetSelectionId);
-
-  AlbumInfo? get _targetAlbum {
-    if (_isDeleteOnly) return null;
-    for (final a in _writableAlbums) {
-      if (a.id == _targetSelectionId) return a;
-    }
-    return null;
-  }
 
   @override
   void initState() {
     super.initState();
     _libraryTab = ref.read(libraryTabStateProvider.notifier);
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
   @override
@@ -73,181 +49,93 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final photoService = ref.read(photoLibraryServiceProvider);
-    final organizeRepo = ref.read(organizeRepositoryProvider);
-    final sessionService = ref.read(sessionServiceProvider);
-    final settings = ref.read(settingsRepositoryProvider);
-
-    final permission = await photoService.requestPermission();
-    if (permission == PhotoPermissionStatus.denied) {
-      if (mounted) context.push(AppRoutes.permissionDenied);
-      return;
-    }
-
-    final allAlbumsResult = await photoService.listAlbums();
-    final writableAlbumsResult = await photoService.listAlbums(writableOnly: true);
-    final pendingDelete = await organizeRepo.pendingDeleteCount();
-    final activeSession = await sessionService.getActiveSession();
-    final savedTargetId = await settings.getLastTargetAlbumId();
-
+  void _bootstrap() {
     if (!mounted) return;
+    final home = ref.read(homeControllerProvider);
+    ref.read(homeControllerProvider.notifier).load(silent: home.hasData);
+  }
 
-    if (allAlbumsResult is AppFailure<List<AlbumInfo>>) {
-      setState(() {
-        _loading = false;
-        _error = allAlbumsResult.message;
-      });
-      return;
-    }
-
-    final allAlbums = (allAlbumsResult as AppSuccess<List<AlbumInfo>>).value;
-    final writableAlbums = writableAlbumsResult is AppSuccess<List<AlbumInfo>>
-        ? writableAlbumsResult.value
-        : <AlbumInfo>[];
-
-    final source = _source ?? (allAlbums.isNotEmpty ? allAlbums.first : null);
-
-    var targetSelectionId = _targetSelectionId;
-    if (!_restoredTarget) {
-      if (savedTargetId != null) {
-        targetSelectionId = savedTargetId;
-      }
-      _restoredTarget = true;
-    }
-    if (OrganizeMode.isDeleteOnly(targetSelectionId)) {
-      targetSelectionId = OrganizeMode.deleteOnlyTargetId;
-    } else if (!writableAlbums.any((a) => a.id == targetSelectionId)) {
-      targetSelectionId = OrganizeMode.deleteOnlyTargetId;
-    }
-
-    final pendingByAlbum = <String, int>{};
-    for (final album in allAlbums) {
-      final processed = await organizeRepo.getProcessedIds(album.id);
-      var pending = album.assetCount - processed.length;
-      if (pending < 0) pending = 0;
-      pendingByAlbum[album.id] = pending;
-    }
-
-    final pendingOrganize = source != null ? pendingByAlbum[source.id] ?? 0 : 0;
-
-    Uint8List? sourceCover;
-    if (source != null) {
-      sourceCover = await photoService.getAlbumCover(source.id);
-    }
-
-    final targetCovers = <String, Uint8List?>{};
-    for (final album in writableAlbums.take(8)) {
-      targetCovers[album.id] = await photoService.getAlbumCover(album.id, size: 224);
-    }
-
+  Future<void> _load({bool silent = false}) async {
+    await ref.read(homeControllerProvider.notifier).load(silent: silent);
     if (!mounted) return;
-
-    setState(() {
-      _loading = false;
-      _permission = permission;
-      _allAlbums = allAlbums;
-      _writableAlbums = writableAlbums;
-      _source = source;
-      _targetSelectionId = targetSelectionId;
-      _pendingDeleteCount = pendingDelete;
-      _pendingOrganizeCount = pendingOrganize;
-      _pendingByAlbum
-        ..clear()
-        ..addAll(pendingByAlbum);
-      _sourceCover = sourceCover;
-      _targetCovers
-        ..clear()
-        ..addAll(targetCovers);
-      _activeSessionHint = activeSession == null
-          ? null
-          : '继续整理「${_albumName(activeSession.sourceAlbumId)}」？还剩 $pendingOrganize 张';
-    });
-
-    _syncLibraryTabState();
-  }
-
-  void _syncLibraryTabState() {
-    final hasValidTarget = _isDeleteOnly || _targetAlbum != null;
-    final canStart = _pendingOrganizeCount > 0 && _source != null && hasValidTarget;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _libraryTab.updateTab(
-            canStart: canStart,
-            buttonLabel: canStart ? AppStrings.startOrganize : AppStrings.allOrganized,
-            onStart: canStart ? _start : null,
-          );
-    });
-  }
-
-  Future<void> _selectTarget(String id) async {
-    if (!OrganizeMode.isDeleteOnly(id) && !_writableAlbums.any((a) => a.id == id)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法使用该相册作为目标，请选择其他相册')),
-        );
-      }
+    final error = ref.read(homeControllerProvider).error;
+    if (error == 'permission_denied') {
+      context.push(AppRoutes.permissionDenied);
       return;
     }
-    setState(() => _targetSelectionId = id);
-    await ref.read(settingsRepositoryProvider).setLastTargetAlbumId(id);
-    _syncLibraryTabState();
+    ref.read(homeControllerProvider.notifier).syncLibraryTab(onStart: _start);
   }
 
-  String _albumName(String id) {
-    return _allAlbums
-        .firstWhere((a) => a.id == id, orElse: () => AlbumInfo(id: id, name: id, assetCount: 0))
-        .name;
-  }
-
-  Future<void> _pickSource() async {
+  Future<void> _pickSource(HomeState home) async {
     final picked = await showAlbumPickerSheet(
       context: context,
       title: '选择来源相册',
-      albums: _allAlbums,
-      pendingCounts: _pendingByAlbum,
-      selectedId: _source?.id,
+      albums: home.allAlbums,
+      pendingCounts: home.pendingByAlbum,
+      selectedId: home.source?.id,
     );
     if (picked == null) return;
-    setState(() => _source = picked);
-    await _load();
+    ref.read(homeControllerProvider.notifier).setSource(picked);
+    await _load(silent: true);
   }
 
-  Future<void> _pickTarget({bool viewAll = false}) async {
+  Future<void> _pickTarget(HomeState home, {bool viewAll = false}) async {
     final picked = await showAlbumPickerSheet(
       context: context,
       title: viewAll ? '全部目标相册' : '选择目标相册',
-      albums: _writableAlbums,
-      pendingCounts: _pendingByAlbum,
-      selectedId: _isDeleteOnly ? null : _targetSelectionId,
+      albums: home.writableAlbums,
+      pendingCounts: home.pendingByAlbum,
+      selectedId: home.isDeleteOnly ? null : home.targetSelectionId,
     );
     if (picked == null) return;
-    await _selectTarget(picked.id);
+    final ok = await ref.read(homeControllerProvider.notifier).selectTarget(picked.id);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法使用该相册作为目标，请选择其他相册')),
+      );
+    }
+    ref.read(homeControllerProvider.notifier).syncLibraryTab(onStart: _start);
+  }
+
+  Future<void> _selectTarget(String id) async {
+    final ok = await ref.read(homeControllerProvider.notifier).selectTarget(id);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法使用该相册作为目标，请选择其他相册')),
+      );
+    }
+    ref.read(homeControllerProvider.notifier).syncLibraryTab(onStart: _start);
   }
 
   Future<void> _createAlbum() async {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(AppStrings.createAlbum),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: '输入相册名称'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('创建'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final trimmed = controller.text.trim();
+          final canCreate = trimmed.isNotEmpty && trimmed.length <= OrganizeConstants.maxAlbumNameLength;
+          return AlertDialog(
+            title: const Text(AppStrings.createAlbum),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: '输入相册名称',
+                counterText: '${trimmed.length}/${OrganizeConstants.maxAlbumNameLength}',
+              ),
+              autofocus: true,
+              maxLength: OrganizeConstants.maxAlbumNameLength,
+              onChanged: (_) => setDialogState(() {}),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+              FilledButton(
+                onPressed: canCreate ? () => Navigator.pop(context, trimmed) : null,
+                child: const Text('创建'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (name == null || name.isEmpty) return;
@@ -259,16 +147,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
     final album = (result as AppSuccess<AlbumInfo>).value;
-    await _load();
+    await _load(silent: true);
     await _selectTarget(album.id);
   }
 
   Future<void> _start({bool continueSession = false}) async {
     if (!mounted) return;
-    final source = _source;
+    final home = ref.read(homeControllerProvider);
+    final source = home.source;
     if (source == null) return;
 
-    if (!_isDeleteOnly && _targetAlbum == null) {
+    if (!home.isDeleteOnly && home.targetAlbum == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请先选择有效的目标相册')),
       );
@@ -276,7 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final sessionService = ref.read(sessionServiceProvider);
-    final targetId = _isDeleteOnly ? OrganizeMode.deleteOnlyTargetId : _targetAlbum!.id;
+    final targetId = home.isDeleteOnly ? OrganizeMode.deleteOnlyTargetId : home.targetAlbum!.id;
 
     final session = continueSession
         ? await sessionService.getActiveSession()
@@ -298,42 +187,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         sessionId: session.sessionId,
         sourceAlbumId: source.id,
         sourceAlbumName: source.name,
-        targetAlbumId: _isDeleteOnly ? null : _targetAlbum?.id,
-        targetAlbumName: _isDeleteOnly ? '仅删除' : _targetAlbum?.name,
+        targetAlbumId: home.isDeleteOnly ? null : home.targetAlbum?.id,
+        targetAlbumName: home.isDeleteOnly ? '仅删除' : home.targetAlbum?.name,
         totalCount: pending > 0 ? pending : source.assetCount,
         initialIndex: 0,
-        deleteOnly: _isDeleteOnly,
+        deleteOnly: home.isDeleteOnly,
       ),
     );
   }
 
   Future<void> _reorganize() async {
-    final source = _source;
+    final source = ref.read(homeControllerProvider).source;
     if (source == null) return;
     await ref.read(organizeRepositoryProvider).clearProcessed(source.id);
-    await _load();
+    await _load(silent: true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final home = ref.watch(homeControllerProvider);
+
     ref.listen<int>(homeRefreshProvider, (previous, next) {
-      if (previous != next) _load();
+      if (previous != next) _load(silent: true);
     });
 
-    if (_loading) {
+    if (home.isInitialLoading || (!home.hasData && home.error == null)) {
       return Scaffold(
         backgroundColor: context.appBackground,
         body: const LoadingView(message: '加载相册...'),
       );
     }
-    if (_error != null) {
+    if (home.error != null && home.error != 'permission_denied') {
       return Scaffold(
         backgroundColor: context.appBackground,
-        body: ErrorView(message: _error!, onRetry: _load),
+        body: ErrorView(message: home.error!, onRetry: () => _load()),
       );
     }
 
-    final source = _source;
+    final source = home.source;
     final showHistoryBadge = ref.watch(historyBadgeProvider);
 
     return Scaffold(
@@ -341,8 +232,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => _load(),
           child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               LargeTitleHeader(
                 title: AppStrings.appTitle,
@@ -357,13 +249,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                 ),
               ),
-              if (_permission == PhotoPermissionStatus.limited)
+              if (home.isRefreshing)
+                const SliverToBoxAdapter(
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              if (home.permission == PhotoPermissionStatus.limited)
                 SliverToBoxAdapter(
                   child: LimitedAccessBanner(
                     onAddMore: () => ref.read(photoLibraryServiceProvider).presentLimitedLibraryPicker(),
                   ),
                 ),
-              if (_activeSessionHint != null && _pendingOrganizeCount > 0)
+              if (home.activeSessionHint != null && home.pendingOrganizeCount > 0)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -371,7 +267,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: context.appPrimary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       child: ListTile(
-                        title: Text(_activeSessionHint!, style: TextStyle(color: context.appPrimary)),
+                        title: Text(home.activeSessionHint!, style: TextStyle(color: context.appPrimary)),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _start(continueSession: true),
                       ),
@@ -389,25 +285,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: AlbumSourceCard(
                     albumName: source.name,
                     totalCount: source.assetCount,
-                    pendingCount: _pendingOrganizeCount,
-                    coverBytes: _sourceCover,
-                    onTap: _pickSource,
+                    pendingCount: home.pendingOrganizeCount,
+                    coverBytes: home.sourceCover,
+                    onTap: () => _pickSource(home),
                   ),
                 ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 24),
                   child: AlbumTargetCarousel(
-                    albums: _writableAlbums.map((a) => (id: a.id, name: a.name)).toList(),
-                    selectedId: _targetSelectionId,
-                    thumbnails: _targetCovers,
+                    albums: home.writableAlbums.map((a) => (id: a.id, name: a.name)).toList(),
+                    selectedId: home.targetSelectionId,
+                    thumbnails: home.targetCovers,
                     onSelect: _selectTarget,
                     onCreate: _createAlbum,
-                    onViewAll: () => _pickTarget(viewAll: true),
+                    onViewAll: () => _pickTarget(home, viewAll: true),
                   ),
                 ),
               ),
-              if (_pendingOrganizeCount == 0)
+              if (home.pendingOrganizeCount == 0)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -417,10 +313,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-              if (_pendingDeleteCount > 0)
+              if (home.pendingDeleteCount > 0)
                 SliverToBoxAdapter(
                   child: PendingDeleteEntry(
-                    count: _pendingDeleteCount,
+                    count: home.pendingDeleteCount,
                     onTap: () => context.push(AppRoutes.pendingDelete),
                   ),
                 ),

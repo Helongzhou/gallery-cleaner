@@ -45,7 +45,7 @@ void main() {
     await pauseForDemo();
 
     expect(find.text('来源相册'), findsOneWidget);
-    expect(find.text('相库'), findsOneWidget);
+    expect(find.text('整理'), findsOneWidget);
     expect(find.byKey(const Key('home_start_organize')), findsOneWidget);
     expect(find.text(AppStrings.startOrganize), findsOneWidget);
     await pauseForDemo();

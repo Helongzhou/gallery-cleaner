@@ -38,6 +38,10 @@ class LibraryTabController extends StateNotifier<LibraryTabState> {
     setStartHandler(onStart);
     state = LibraryTabState(canStart: canStart, buttonLabel: buttonLabel);
   }
+
+  void updateTabState({required bool canStart, required String buttonLabel}) {
+    state = state.copyWith(canStart: canStart, buttonLabel: buttonLabel);
+  }
 }
 
 final libraryTabStateProvider =

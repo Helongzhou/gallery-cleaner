@@ -15,6 +15,8 @@ final historyServiceProvider = Provider(
 
 final homeRefreshProvider = StateProvider<int>((ref) => 0);
 
+final smartRefreshProvider = StateProvider<int>((ref) => 0);
+
 class HistoryState {
   const HistoryState({
     this.sessions = const [],

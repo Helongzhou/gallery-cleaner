@@ -17,18 +17,19 @@
 - **UniversalModal**：统一确认弹窗；`AppText.formatMixed` 文案格式化
 - **品牌**：应用显示名「相册主理人」
 - **应用图标**与**浅/深启动图**
+- **Android 支持**（API 29+）：全功能对标 iOS v1.1，侧载 APK 分发
 
 ### 变更
 
 - 「共享」Tab 改为「足迹」；`/shared` 重定向至 `/footprints`
 - 设置从独立页合并至「我的」Tab，移除 `/settings` 路由
 - 主题与足迹地图样式均支持「跟随系统」
+- `PhotoLibraryService` 增加 Android 平台分支（创建相册、撤销移出、截图相册识别）
 
 ### 未做（规划后续）
 
 - 相似照片、超大视频、模糊检测
 - Face ID 真实验证（`local_auth`）、隐藏相册
-- Android
 
 ---
 

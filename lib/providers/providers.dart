@@ -42,6 +42,7 @@ final screenshotScanServiceProvider = Provider<ScreenshotScanService>(
 final cacheClearServiceProvider = Provider<CacheClearService>(
   (ref) => CacheClearService(
     ref.watch(databaseProvider),
+    ref.watch(organizeRepositoryProvider),
     ref.watch(screenshotCacheRepositoryProvider),
     ref.watch(footprintCacheRepositoryProvider),
   ),
