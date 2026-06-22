@@ -33,7 +33,7 @@ class _SmartScreenState extends ConsumerState<SmartScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -74,11 +74,9 @@ class _SmartScreenState extends ConsumerState<SmartScreen> {
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => _load(forceRefresh: true),
-          child: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: () => _load(forceRefresh: true),
+        child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               LargeTitleHeader(
@@ -147,7 +145,6 @@ class _SmartScreenState extends ConsumerState<SmartScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

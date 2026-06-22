@@ -41,20 +41,44 @@ class ScreenshotScanService {
   }
 
   Future<List<String>> _scanBucket(ScreenshotBucket bucket, {bool forceRefresh = false}) async {
-    if (!forceRefresh) {
-      final cached = await _cache.getCachedIds(bucket);
-      if (cached != null) return cached;
+    final liveIds = await _fetchLiveIds(bucket);
+
+    if (forceRefresh) {
+      await _persistScanResult(bucket, liveIds);
+      return liveIds;
     }
 
+    final cached = await _cache.getCachedIds(bucket);
+    if (cached == null) {
+      await _persistScanResult(bucket, liveIds);
+      return liveIds;
+    }
+
+    final cachedSet = cached.toSet();
+    final liveSet = liveIds.toSet();
+    if (cachedSet.length == liveSet.length && cachedSet.containsAll(liveSet)) {
+      return cached;
+    }
+
+    // Cache is out of sync with the album (e.g. failed delete pruned ids, or reset pending).
+    await _persistScanResult(bucket, liveIds);
+    return liveIds;
+  }
+
+  Future<List<String>> _fetchLiveIds(ScreenshotBucket bucket) async {
     final cutoff = bucket.cutoffAt(DateTime.now());
     final result = await _photoService.getScreenshotAssetsOlderThan(cutoff);
     if (result is AppFailure<List<PhotoAssetInfo>>) return [];
 
     final assets = (result as AppSuccess<List<PhotoAssetInfo>>).value;
-    final ids = assets.map((a) => a.id).toList();
+    return assets.map((asset) => asset.id).toList();
+  }
+
+  Future<void> _persistScanResult(ScreenshotBucket bucket, List<String> ids) async {
     if (ids.isNotEmpty) {
       await _cache.save(bucket, ids);
+    } else {
+      await _cache.clearBucket(bucket);
     }
-    return ids;
   }
 }

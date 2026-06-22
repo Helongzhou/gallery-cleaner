@@ -165,7 +165,6 @@ class _PendingDeleteScreenState extends ConsumerState<PendingDeleteScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: context.appBackground.withValues(alpha: 0.8),
         elevation: 0,
         leading: TextButton(
           key: const Key('pending_delete_cancel'),

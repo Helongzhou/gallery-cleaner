@@ -12,6 +12,9 @@ class IntegrationSettingsRepository extends SettingsRepository {
   Future<bool> hasSeenOnboarding() async => true;
 
   @override
+  Future<String?> getLastSourceAlbumId() async => null;
+
+  @override
   Future<String?> getLastTargetAlbumId() async => null;
 }
 

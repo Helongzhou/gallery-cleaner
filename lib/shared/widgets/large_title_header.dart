@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_theme.dart';
+import '../utils/immersive_system_ui.dart';
 
 class LargeTitleHeader extends StatelessWidget {
   const LargeTitleHeader({
@@ -17,9 +17,9 @@ class LargeTitleHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.marginSide,
-          8,
+          context.statusBarTop + 8,
           AppSpacing.marginSide,
           AppSpacing.stackMedium,
         ),

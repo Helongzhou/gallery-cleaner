@@ -13,6 +13,7 @@ import '../../providers/settings_provider.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/immersive_system_ui.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/limited_access_banner.dart';
 import 'widgets/city_footprint_list.dart';
@@ -41,14 +42,12 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.marginSide, 8, 8, 0),
-              child: Row(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(AppSpacing.marginSide, context.statusBarTop + 8, 8, 0),
+            child: Row(
                 children: [
                   Expanded(
                     child: Text(
@@ -89,7 +88,6 @@ class _FootprintsScreenState extends ConsumerState<FootprintsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

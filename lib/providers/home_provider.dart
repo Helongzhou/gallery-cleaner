@@ -8,6 +8,7 @@ import '../models/photo_permission_status.dart';
 import '../shared/constants/organize_mode.dart';
 import '../shared/constants/strings.dart';
 import '../shared/result.dart';
+import '../shared/utils/source_album_resolver.dart';
 import 'library_tab_state.dart';
 import 'providers.dart';
 
@@ -29,6 +30,8 @@ class HomeState {
     this.pendingByAlbum = const {},
     this.restoredTarget = false,
   });
+
+  static const Object _unset = Object();
 
   final bool isInitialLoading;
   final bool isRefreshing;
@@ -66,7 +69,7 @@ class HomeState {
     PhotoPermissionStatus? permission,
     List<AlbumInfo>? allAlbums,
     List<AlbumInfo>? writableAlbums,
-    AlbumInfo? source,
+    Object? source = _unset,
     String? targetSelectionId,
     int? pendingDeleteCount,
     int? pendingOrganizeCount,
@@ -83,7 +86,7 @@ class HomeState {
       permission: permission ?? this.permission,
       allAlbums: allAlbums ?? this.allAlbums,
       writableAlbums: writableAlbums ?? this.writableAlbums,
-      source: source ?? this.source,
+      source: source == _unset ? this.source : source as AlbumInfo?,
       targetSelectionId: targetSelectionId ?? this.targetSelectionId,
       pendingDeleteCount: pendingDeleteCount ?? this.pendingDeleteCount,
       pendingOrganizeCount: pendingOrganizeCount ?? this.pendingOrganizeCount,
@@ -136,6 +139,7 @@ class HomeController extends StateNotifier<HomeState> {
     final writableAlbumsResult = await photoService.listAlbums(writableOnly: true);
     final pendingDelete = await organizeRepo.pendingDeleteCount();
     final activeSession = await sessionService.getActiveSession();
+    final savedSourceId = await settings.getLastSourceAlbumId();
     final savedTargetId = await settings.getLastTargetAlbumId();
 
     if (allAlbumsResult is AppFailure<List<AlbumInfo>>) {
@@ -152,7 +156,10 @@ class HomeController extends StateNotifier<HomeState> {
         ? writableAlbumsResult.value
         : <AlbumInfo>[];
 
-    final source = state.source ?? (allAlbums.isNotEmpty ? allAlbums.first : null);
+    final source = resolveSourceAlbum(allAlbums, preferredId: savedSourceId);
+    if (source != null && savedSourceId == null) {
+      await settings.setLastSourceAlbumId(source.id);
+    }
 
     var targetSelectionId = state.targetSelectionId;
     var restoredTarget = state.restoredTarget;
@@ -238,8 +245,9 @@ class HomeController extends StateNotifier<HomeState> {
     return true;
   }
 
-  void setSource(AlbumInfo source) {
+  Future<void> setSource(AlbumInfo source) async {
     state = state.copyWith(source: source);
+    await _ref.read(settingsRepositoryProvider).setLastSourceAlbumId(source.id);
   }
 
   String albumName(String id) {

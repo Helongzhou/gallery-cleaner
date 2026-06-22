@@ -301,10 +301,9 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            SwipeHeader(
+      body: Column(
+        children: [
+          SwipeHeader(
               title: widget.args.sourceAlbumName,
               current: _processedInSession,
               total: widget.args.totalCount,
@@ -473,7 +472,6 @@ class _SwipeScreenState extends ConsumerState<SwipeScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 }

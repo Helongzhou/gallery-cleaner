@@ -54,11 +54,17 @@ class AppTheme {
       textTheme: textTheme,
       dividerColor: scheme.outlineVariant.withValues(alpha: isDark ? 0.4 : 0.3),
       appBarTheme: AppBarTheme(
-        backgroundColor: scaffoldColor.withValues(alpha: 0.9),
+        backgroundColor: scaffoldColor.withValues(alpha: 0.82),
+        surfaceTintColor: Colors.transparent,
         foregroundColor: scheme.onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scaffoldColor.withValues(alpha: 0.92),

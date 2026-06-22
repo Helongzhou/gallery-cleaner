@@ -32,60 +32,63 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showCta)
-            GlassContainer(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              border: Border(top: BorderSide(color: AppColors.outlineVariant.withValues(alpha: 0.2))),
-              child: PrimaryButton(
-                key: const Key('home_start_organize'),
-                label: libraryState.buttonLabel,
-                icon: libraryState.canStart ? Icons.auto_awesome : null,
-                onPressed: libraryState.canStart
-                    ? () => ref.read(libraryTabStateProvider.notifier).startOrganize()
-                    : null,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showCta)
+              GlassContainer(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                border: Border(top: BorderSide(color: AppColors.outlineVariant.withValues(alpha: 0.2))),
+                child: PrimaryButton(
+                  key: const Key('home_start_organize'),
+                  label: libraryState.buttonLabel,
+                  icon: libraryState.canStart ? Icons.auto_awesome : null,
+                  onPressed: libraryState.canStart
+                      ? () => ref.read(libraryTabStateProvider.notifier).startOrganize()
+                      : null,
+                ),
               ),
+            NavigationBar(
+              selectedIndex: tabIndex,
+              onDestinationSelected: (index) {
+                switch (index) {
+                  case 0:
+                    context.go(AppRoutes.home);
+                  case 1:
+                    context.go(AppRoutes.smart);
+                  case 2:
+                    context.go(AppRoutes.footprints);
+                  case 3:
+                    context.go(AppRoutes.profile);
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.photo_library_outlined),
+                  selectedIcon: Icon(Icons.photo_library),
+                  label: AppStrings.organizeTabLabel,
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.auto_awesome_outlined),
+                  selectedIcon: Icon(Icons.auto_awesome),
+                  label: '智能',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.explore_outlined),
+                  selectedIcon: Icon(Icons.explore),
+                  label: '足迹',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: '我的',
+                ),
+              ],
             ),
-          NavigationBar(
-            selectedIndex: tabIndex,
-            onDestinationSelected: (index) {
-              switch (index) {
-                case 0:
-                  context.go(AppRoutes.home);
-                case 1:
-                  context.go(AppRoutes.smart);
-                case 2:
-                  context.go(AppRoutes.footprints);
-                case 3:
-                  context.go(AppRoutes.profile);
-              }
-            },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.photo_library_outlined),
-                selectedIcon: Icon(Icons.photo_library),
-                label: AppStrings.organizeTabLabel,
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.auto_awesome_outlined),
-                selectedIcon: Icon(Icons.auto_awesome),
-                label: '智能',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.explore_outlined),
-                selectedIcon: Icon(Icons.explore),
-                label: '足迹',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: '我的',
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

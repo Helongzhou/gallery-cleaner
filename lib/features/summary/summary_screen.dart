@@ -10,6 +10,7 @@ import '../../router/routes.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_colors.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/immersive_system_ui.dart';
 import '../../shared/widgets/primary_button.dart';
 
 class SummaryScreen extends ConsumerStatefulWidget {
@@ -52,10 +53,9 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> with SingleTicker
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(24, context.statusBarTop + 24, 24, 24),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 24),
@@ -166,7 +166,6 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> with SingleTicker
             ],
           ),
         ),
-      ),
     );
   }
 }

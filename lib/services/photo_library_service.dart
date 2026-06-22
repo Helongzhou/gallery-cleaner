@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/scheduler.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:photo_manager/photo_manager.dart';
 
@@ -282,6 +283,12 @@ class PhotoLibraryService {
     }
 
     try {
+      if (Platform.isAndroid) {
+        // Let in-app confirmation dialogs finish dismissing before the system
+        // delete intent is launched; otherwise MIUI and other skins may skip it.
+        await SchedulerBinding.instance.endOfFrame;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
       final deletedIds = await _deleteAssetIds(assetIds);
       final deletedSet = deletedIds.toSet();
       final failed = assetIds.where((id) => !deletedSet.contains(id)).toList();
@@ -294,27 +301,27 @@ class PhotoLibraryService {
   }
 
   Future<List<String>> _deleteAssetIds(List<String> assetIds) async {
-    if (Platform.isAndroid) {
-      final sdk = int.tryParse(await PhotoManager.systemVersion()) ?? 0;
-      if (sdk >= 30) {
-        final entities = <AssetEntity>[];
-        for (final id in assetIds) {
-          final entity = await AssetEntity.fromId(id);
-          if (entity != null) {
-            entities.add(entity);
-          }
-        }
-        if (entities.isEmpty) {
-          return const [];
-        }
-        final trashed = await PhotoManager.editor.android.moveToTrash(entities);
-        if (trashed.isNotEmpty) {
-          return trashed;
-        }
-        return PhotoManager.editor.deleteWithIds(assetIds);
+    final reported = await PhotoManager.editor.deleteWithIds(assetIds);
+    if (!Platform.isAndroid || reported.isEmpty) {
+      return reported;
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final verified = <String>[];
+    for (final id in reported) {
+      if (!await _isAssetStillInLibrary(id)) {
+        verified.add(id);
       }
     }
-    return PhotoManager.editor.deleteWithIds(assetIds);
+    return verified;
+  }
+
+  Future<bool> _isAssetStillInLibrary(String assetId) async {
+    final entity = await AssetEntity.fromId(assetId);
+    if (entity == null) {
+      return false;
+    }
+    return entity.exists;
   }
 
   Future<({List<String> existing, List<String> stale})> partitionExistingAssetIds(

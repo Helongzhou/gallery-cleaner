@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/utils/immersive_system_ui.dart';
 
 class SwipeHeader extends StatelessWidget {
   const SwipeHeader({
@@ -89,7 +90,7 @@ class GlassSwipeHeader extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+          padding: EdgeInsets.fromLTRB(8, context.statusBarTop + 8, 8, 12),
           color: context.appBackground.withValues(alpha: 0.7),
           child: child,
         ),

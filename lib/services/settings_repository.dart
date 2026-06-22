@@ -11,10 +11,32 @@ class SettingsRepository {
   final AppDatabase _db;
 
   static const _onboardingKey = 'has_seen_onboarding';
+  static const _lastSourceKey = 'last_source_album_id';
   static const _lastTargetKey = 'last_target_album_id';
   static const _themePreferenceKey = 'theme_preference';
   static const _biometricLockKey = 'biometric_lock_enabled';
   static const _footprintMapStyleKey = 'footprint_map_style';
+
+  Future<String?> getLastSourceAlbumId() async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'app_settings',
+      where: 'key = ?',
+      whereArgs: [_lastSourceKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  Future<void> setLastSourceAlbumId(String albumId) async {
+    final db = await _db.database;
+    await db.insert(
+      'app_settings',
+      {'key': _lastSourceKey, 'value': albumId},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
 
   Future<String?> getLastTargetAlbumId() async {
     final db = await _db.database;

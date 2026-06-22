@@ -47,6 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _clearCache() async {
     await ref.read(cacheClearServiceProvider).clearScanCaches();
+    ref.read(smartRefreshProvider.notifier).state++;
     HapticFeedback.mediumImpact();
     await _loadCacheInfo();
     if (mounted) TopToastInfo.show(context, AppStrings.clearScanCacheSuccess);
@@ -98,9 +99,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
+      body: CustomScrollView(
           slivers: [
             const LargeTitleHeader(title: AppStrings.profileTitle),
             SliverPadding(
@@ -206,7 +205,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 }

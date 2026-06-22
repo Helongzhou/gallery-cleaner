@@ -42,13 +42,13 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     setState(() => _loading = true);
     final scanService = ref.read(screenshotScanServiceProvider);
-    final assets = await scanService.getAssets(widget.bucket);
+    final assets = await scanService.getAssets(widget.bucket, forceRefresh: forceRefresh);
 
     if (!mounted) return;
     setState(() {
@@ -116,7 +116,20 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
 
     HapticFeedback.heavyImpact();
     final photoService = ref.read(photoLibraryServiceProvider);
-    final result = await photoService.deleteAssets(_selected.toList());
+    final partitioned = await photoService.partitionExistingAssetIds(_selected.toList());
+    if (!mounted) return;
+
+    if (partitioned.existing.isEmpty) {
+      ref.read(smartRefreshProvider.notifier).state++;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('所选截图已不在相册中')),
+      );
+      await _load(forceRefresh: true);
+      return;
+    }
+
+    final result = await photoService.deleteAssets(partitioned.existing);
     if (!mounted) return;
 
     if (result is AppFailure<DeleteResult>) {
@@ -132,8 +145,9 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
       return;
     }
 
-    if (deleteResult.failedIds.isNotEmpty) {
-      final successSet = deleteResult.successIds.toSet();
+    final successSet = deleteResult.successIds.toSet();
+    if (successSet.isNotEmpty) {
+      if (!mounted) return;
       setState(() {
         _assets.removeWhere((asset) => successSet.contains(asset.id));
         _selected.removeAll(successSet);
@@ -142,7 +156,11 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
           _fileSizes.remove(id);
         }
       });
-      ref.read(smartRefreshProvider.notifier).state++;
+    }
+    ref.read(smartRefreshProvider.notifier).state++;
+    if (!mounted) return;
+
+    if (deleteResult.failedIds.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -156,24 +174,25 @@ class _ScreenshotListScreenState extends ConsumerState<ScreenshotListScreen> {
       return;
     }
 
-    await ref.read(screenshotCacheRepositoryProvider).clearAll();
-    ref.read(smartRefreshProvider.notifier).state++;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(AppStrings.screenshotCleanSuccessMessage(deleteResult.successIds.length)),
       ),
     );
-    if (context.canPop()) {
+    if (_assets.isEmpty && context.canPop()) {
       context.pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(smartRefreshProvider, (previous, next) {
+      if (previous != next) _load(forceRefresh: true);
+    });
+
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: context.appBackground.withValues(alpha: 0.9),
         elevation: 0,
         title: Text('${widget.bucket.label}截图', style: Theme.of(context).textTheme.titleMedium),
         centerTitle: true,

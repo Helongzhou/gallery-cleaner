@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../router/routes.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/immersive_system_ui.dart';
 import '../../shared/widgets/primary_button.dart';
 
 class OnboardingScreen extends ConsumerWidget {
@@ -21,16 +22,15 @@ class OnboardingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(AppStrings.appTitle, style: Theme.of(context).textTheme.displaySmall),
-              ),
+      body: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, context.statusBarTop + 16, 16, 16),
+              child: Text(AppStrings.appTitle, style: Theme.of(context).textTheme.displaySmall),
             ),
+          ),
             Expanded(
               child: PageView.builder(
                 itemCount: _pages.length,
@@ -92,7 +92,6 @@ class OnboardingScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 

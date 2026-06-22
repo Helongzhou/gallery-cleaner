@@ -15,6 +15,7 @@ import '../../shared/constants/organize_mode.dart';
 import '../../shared/constants/strings.dart';
 import '../../shared/result.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/immersive_system_ui.dart';
 import '../../shared/widgets/album_source_card.dart';
 import '../../shared/widgets/album_target_carousel.dart';
 import '../../shared/widgets/error_view.dart';
@@ -66,16 +67,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(homeControllerProvider.notifier).syncLibraryTab(onStart: _start);
   }
 
-  Future<void> _pickSource(HomeState home) async {
+  Future<void> _pickSource() async {
+    final home = ref.read(homeControllerProvider);
+    final defaultSourceId = home.allAlbums.isNotEmpty ? home.allAlbums.first.id : null;
     final picked = await showAlbumPickerSheet(
       context: context,
       title: '选择来源相册',
       albums: home.allAlbums,
       pendingCounts: home.pendingByAlbum,
-      selectedId: home.source?.id,
+      selectedId: home.source?.id ?? defaultSourceId,
     );
     if (picked == null) return;
-    ref.read(homeControllerProvider.notifier).setSource(picked);
+    await ref.read(homeControllerProvider.notifier).setSource(picked);
     await _load(silent: true);
   }
 
@@ -214,26 +217,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (home.isInitialLoading || (!home.hasData && home.error == null)) {
       return Scaffold(
         backgroundColor: context.appBackground,
-        body: const LoadingView(message: '加载相册...'),
+        body: Padding(
+          padding: EdgeInsets.only(top: context.statusBarTop),
+          child: const LoadingView(message: '加载相册...'),
+        ),
       );
     }
     if (home.error != null && home.error != 'permission_denied') {
       return Scaffold(
         backgroundColor: context.appBackground,
-        body: ErrorView(message: home.error!, onRetry: () => _load()),
+        body: Padding(
+          padding: EdgeInsets.only(top: context.statusBarTop),
+          child: ErrorView(message: home.error!, onRetry: () => _load()),
+        ),
       );
     }
 
-    final source = home.source;
+    final source = home.source ?? (home.allAlbums.isNotEmpty ? home.allAlbums.first : null);
     final showHistoryBadge = ref.watch(historyBadgeProvider);
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => _load(),
-          child: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: () => _load(),
+        child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               LargeTitleHeader(
@@ -287,7 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     totalCount: source.assetCount,
                     pendingCount: home.pendingOrganizeCount,
                     coverBytes: home.sourceCover,
-                    onTap: () => _pickSource(home),
+                    onTap: () => _pickSource(),
                   ),
                 ),
               SliverToBoxAdapter(
@@ -324,7 +331,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

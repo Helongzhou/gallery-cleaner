@@ -59,4 +59,52 @@ class ScreenshotCacheRepository {
     final db = await _db.database;
     await db.delete('screenshot_scan_cache');
   }
+
+  Future<void> clearBucket(ScreenshotBucket bucket) async {
+    final db = await _db.database;
+    await db.delete(
+      'screenshot_scan_cache',
+      where: 'bucket = ?',
+      whereArgs: [bucket.key],
+    );
+  }
+
+  Future<void> removeIds(List<String> assetIds) async {
+    if (assetIds.isEmpty) return;
+    final removeSet = assetIds.toSet();
+    final db = await _db.database;
+
+    for (final bucket in ScreenshotBucket.values) {
+      final rows = await db.query(
+        'screenshot_scan_cache',
+        where: 'bucket = ?',
+        whereArgs: [bucket.key],
+        limit: 1,
+      );
+      if (rows.isEmpty) continue;
+
+      final raw = rows.first['asset_ids'] as String;
+      final decoded = (jsonDecode(raw) as List<dynamic>).cast<String>();
+      final updated = decoded.where((id) => !removeSet.contains(id)).toList();
+      if (updated.length == decoded.length) continue;
+
+      if (updated.isEmpty) {
+        await db.delete(
+          'screenshot_scan_cache',
+          where: 'bucket = ?',
+          whereArgs: [bucket.key],
+        );
+      } else {
+        await db.update(
+          'screenshot_scan_cache',
+          {
+            'asset_ids': jsonEncode(updated),
+            'scanned_at': DateTime.now().millisecondsSinceEpoch,
+          },
+          where: 'bucket = ?',
+          whereArgs: [bucket.key],
+        );
+      }
+    }
+  }
 }

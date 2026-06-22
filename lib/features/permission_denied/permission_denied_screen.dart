@@ -13,10 +13,9 @@ class PermissionDeniedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.appTitle)),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.lock_outline, size: 72),
@@ -44,7 +43,6 @@ class PermissionDeniedScreen extends ConsumerWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
